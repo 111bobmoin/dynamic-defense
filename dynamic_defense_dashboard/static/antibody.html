@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>抗体泛化</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body data-page="antibody">
+    <script>if (new URLSearchParams(window.location.search).get("embed") === "1") document.body.dataset.embed = "true";</script>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark">DYNAMIC DEFENSE</span>
+          <h1>抗体泛化</h1>
+        </div>
+        <div class="topbar-actions">
+          <a class="ghost-button text-link-button" href="/">返回总览</a>
+          <a class="ghost-button text-link-button" href="/unknown-threat.html">未知威胁检测</a>
+        </div>
+      </header>
+
+      <main class="module-page-grid">
+        <section class="panel module-intro-panel">
+          <div class="stage-header">
+            <div>
+              <p class="stage-kicker">ANTIBODY GENERALIZATION</p>
+              <h2>模态内威胁泛化与跨模态抗体泛化</h2>
+              <p class="stage-subtitle">这一页单独承载第二部分能力，当前先保留为空模块，不与 dashboard 或检测页混放。</p>
+            </div>
+            <div class="mode-pills">
+              <span>Intra-modal</span>
+              <span>Cross-modal</span>
+            </div>
+          </div>
+          <div class="placeholder-copy">
+            <strong>待接入内容</strong>
+            <p>模态内威胁泛化、跨模态抗体迁移、抗体库版本管理、评估结果面板。</p>
+          </div>
+        </section>
+
+        <section class="panel stage-panel">
+          <div class="topology-stage dashboard-stage compact-stage" data-scene="antibody">
+            <div class="topology-backdrop"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/app.js" defer></script>
+  </body>
+</html>

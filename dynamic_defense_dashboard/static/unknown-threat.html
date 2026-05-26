@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>未知威胁检测</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body data-page="unknown-threat">
+    <script>if (new URLSearchParams(window.location.search).get("embed") === "1") document.body.dataset.embed = "true";</script>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark">DYNAMIC DEFENSE</span>
+          <h1>未知威胁检测</h1>
+        </div>
+        <div class="topbar-actions">
+          <a class="ghost-button text-link-button" href="/">返回总览</a>
+          <div class="online-pill" id="generatedAt">等待联调</div>
+          <button id="refreshButton" class="ghost-button">刷新</button>
+        </div>
+      </header>
+
+      <main class="main-grid threat-page-shell">
+        <section class="panel threat-tab-panel">
+          <div class="threat-tab-nav" role="tablist" aria-label="未知威胁检测模块导航">
+            <button class="threat-tab-button is-active" type="button" role="tab" aria-selected="true" data-threat-tab="realtime">
+              <span>实时威胁检测总览与异构组件下钻</span>
+            </button>
+            <button class="threat-tab-button" type="button" role="tab" aria-selected="false" data-threat-tab="apt">
+              <span>未知APT攻击检测</span>
+            </button>
+          </div>
+        </section>
+
+        <section class="threat-tab-content is-active" data-threat-panel="realtime" role="tabpanel">
+          <div class="main-grid threat-dashboard-shell">
+            <section class="panel threat-hero-panel">
+              <div class="stage-header threat-hero-header">
+                <div>
+                  <p class="stage-kicker">UNKNOWN THREAT DETECTION</p>
+                  <h2>实时威胁检测总览与异构组件下钻</h2>
+                  <p class="stage-subtitle">聚焦当前在线检测链路，查看攻击数据特征、攻击逻辑与行为图结构三类异构组件的实时运行状态。</p>
+                </div>
+                <div class="mode-pills">
+                  <span>muti3</span>
+                  <span>log</span>
+                  <span>graph</span>
+                </div>
+              </div>
+
+              <div class="threat-hero-toolbar">
+                <div class="threat-hero-chips">
+                  <span class="panel-badge">检测链路在线</span>
+                  <span class="panel-badge cyan">3 类异构组件</span>
+                  <span class="panel-badge">支持组件下钻</span>
+                </div>
+                <button id="runButton" class="primary-button">更新检测流</button>
+              </div>
+            </section>
+
+            <section class="center-stage stage-panel-f threat-topology-panel">
+              <div class="topology-stage" data-scene="unknown-threat">
+                <div class="topology-backdrop"></div>
+              </div>
+            </section>
+
+            <section class="panel component-section-panel">
+              <div class="panel-title-row">
+                <h3>三类异构检测组件</h3>
+                <span class="panel-badge cyan">Live Components</span>
+              </div>
+              <div id="componentGrid" class="component-grid"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-title-row">
+                <h3>联调事件</h3>
+                <span class="panel-badge">Live</span>
+              </div>
+              <div class="stack-list incident-wide-list" id="incidentList"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="threat-tab-content" data-threat-panel="apt" role="tabpanel" hidden>
+          <section class="panel threat-apt-placeholder-panel">
+            <div class="stage-header threat-hero-header">
+              <div>
+                <p class="stage-kicker">UNKNOWN APT DETECTION</p>
+                <h2>未知APT攻击检测</h2>
+                <p class="stage-subtitle">预留用于后续接入未知APT攻击检测链路、跨阶段关联分析与深度研判能力。</p>
+              </div>
+              <div class="mode-pills">
+                <span>APT</span>
+                <span>Correlation</span>
+                <span>Reasoning</span>
+              </div>
+            </div>
+            <div class="threat-apt-placeholder-grid">
+              <article class="threat-apt-placeholder-card">
+                <span>模块状态</span>
+                <strong>功能建设中</strong>
+                <p>后续将在此处承载未知APT攻击检测、阶段画像、攻击链拼接与语义研判入口。</p>
+              </article>
+              <article class="threat-apt-placeholder-card is-muted">
+                <span>规划能力</span>
+                <strong>多阶段APT识别</strong>
+                <p>将接入多源日志、流量、行为图和研判推理能力，形成专属APT检测工作台。</p>
+              </article>
+            </div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <template id="componentTemplate">
+      <article class="component-card">
+        <div class="component-card-header">
+          <div>
+            <h3></h3>
+            <p></p>
+          </div>
+          <span class="status-pill"></span>
+        </div>
+        <div class="component-stat-grid"></div>
+        <div class="component-model-grid"></div>
+        <div class="component-card-footer">
+          <a class="ghost-button text-link-button component-detail-link" href="#">进入实时监控</a>
+        </div>
+      </article>
+    </template>
+
+    <template id="incidentTemplate">
+      <article class="incident-card">
+        <h4></h4>
+        <p></p>
+      </article>
+    </template>
+
+    <script src="/app.js" defer></script>
+  </body>
+</html>

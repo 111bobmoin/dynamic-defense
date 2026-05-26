@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>组件实时监控</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body data-page="model-detail">
+    <div class="app-shell enterprise-shell">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark">DYNAMIC DEFENSE</span>
+          <h1>模型实时监控</h1>
+        </div>
+        <div class="topbar-actions">
+          <a class="ghost-button text-link-button" href="/unknown-threat.html">返回检测页</a>
+          <div class="online-pill" id="generatedAt">等待联调</div>
+        </div>
+      </header>
+
+      <main class="model-detail-enterprise-layout">
+        <section class="panel model-detail-header-panel">
+          <div class="model-detail-header-main">
+            <p class="stage-kicker">COMPONENT MONITORING</p>
+            <h2 id="detailTitle">异构组件实时监控</h2>
+            <p class="stage-subtitle" id="detailSubtitle">等待加载</p>
+          </div>
+          <div class="model-detail-header-side">
+            <span class="panel-badge" id="detailStatusBadge">等待</span>
+            <span class="panel-badge cyan" id="detailModelCount">0 Models</span>
+          </div>
+          <p class="overview-copy" id="detailSummary"></p>
+          <div class="dataset-facts enterprise-dataset-facts" id="detailDatasetFacts"></div>
+        </section>
+
+        <section class="component-monitor-grid enterprise-monitor-grid" id="detailModelMonitorGrid"></section>
+
+        <section class="panel model-pool-panel" id="detailModelPoolPanel">
+          <div class="model-pool-header">
+            <div>
+              <p class="stage-kicker">HETEROGENEOUS MODEL POOL</p>
+              <h3 id="detailModelPoolTitle">异构模型池</h3>
+              <p class="stage-subtitle" id="detailModelPoolFocus">等待加载</p>
+            </div>
+            <div class="model-pool-header-side">
+              <span class="panel-badge" id="detailModelPoolCount">0 Models</span>
+              <span class="panel-badge cyan" id="detailModelPoolOnline">0 Online</span>
+            </div>
+          </div>
+          <p class="overview-copy" id="detailModelPoolSummary"></p>
+          <div class="model-pool-grid" id="detailModelPoolGrid"></div>
+          <div class="model-pool-table-shell">
+            <table class="model-pool-table">
+              <thead>
+                <tr>
+                  <th>模型名称</th>
+                  <th>模型类型</th>
+                  <th>检测对象</th>
+                  <th>准确率</th>
+                  <th>置信度</th>
+                  <th>状态</th>
+                </tr>
+              </thead>
+              <tbody id="detailModelPoolTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/app.js" defer></script>
+  </body>
+</html>

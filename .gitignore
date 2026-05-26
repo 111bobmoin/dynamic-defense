@@ -1,0 +1,14 @@
+.venv/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Oversized local data and binary artifacts that exceed GitHub limits
+graph/BGL.log
+graph/BGL.zip
+log/sorted.log.txt
+log/rawTFVector.txt
+log/TEST_main/DLSTM.zip
+log/TEST_main/GRU.zip
+muti3/Dataset/validata.csv
