@@ -67,6 +67,9 @@ def test_api_status_reads_temp_dynamic_defense_json():
     assert payload["status"] == "attack_detected"
     assert payload["risk_score"] == 75
     assert payload["source"] == "dynamic_defense_ceni"
+    assert payload["data_mode"] == "unknown"
+    assert payload["data_mode_label"] == "未知来源 / unknown"
+    assert payload["data_mode_note"] == "当前 payload 未包含数据模式字段。"
     assert payload["affected_links"] == ["s3-s4", "s4-s7"]
     assert payload["detector"] == "hybrid"
     assert payload["optimizer"] == "actor_critic"
@@ -138,3 +141,5 @@ def test_static_status_html_contains_model_panel_title():
     assert "体系策略切换可视化" in html
     assert "检测模型切换动作计划" in html
     assert "REST/stateful 动作计划生成与状态更新" in html
+    assert "数据模式" in html
+    assert "演示数据 / static-demo" in html

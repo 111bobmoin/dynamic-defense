@@ -23,6 +23,11 @@ DEFAULT_LOG_FILE = "logs/dynamic_defense_ceni_actions.jsonl"
 SERVICE_NAME = "dynamic_defense_ceni_status_server"
 STATIC_HTML = Path(__file__).resolve().parent / "static_status.html"
 VERSION = "v1.0.1-dynamic-defense-ceni"
+DEFAULT_DATA_MODE = {
+    "data_mode": "unknown",
+    "data_mode_label": "未知来源 / unknown",
+    "data_mode_note": "当前 payload 未包含数据模式字段。",
+}
 DEFAULT_MODEL_INFO = {
     "detector_model_name": "FlowMLP family_v3 策略族分类器",
     "detector_model_path": "models/torch_flow_classifier_expanded_family_v3.pt",
@@ -134,6 +139,14 @@ def normalize_model_info(payload: dict[str, Any], metrics: dict[str, Any]) -> di
     return model_info
 
 
+def normalize_data_mode(payload: dict[str, Any]) -> dict[str, str]:
+    return {
+        "data_mode": str(payload.get("data_mode") or DEFAULT_DATA_MODE["data_mode"]),
+        "data_mode_label": str(payload.get("data_mode_label") or DEFAULT_DATA_MODE["data_mode_label"]),
+        "data_mode_note": str(payload.get("data_mode_note") or DEFAULT_DATA_MODE["data_mode_note"]),
+    }
+
+
 def normalize_execution_result(payload: dict[str, Any], metrics: dict[str, Any]) -> dict[str, Any]:
     result = copy.deepcopy(DEFAULT_EXECUTION_RESULT)
     candidate = payload.get("execution_result")
@@ -185,6 +198,7 @@ def extract_status(payload: dict[str, Any]) -> dict[str, Any]:
         attack_type_accuracy = {}
 
     model_info = normalize_model_info(payload, metrics)
+    data_mode = normalize_data_mode(payload)
     execution_result = normalize_execution_result(payload, metrics)
     strategy_switch_visualization = normalize_strategy_switch_visualization(payload, metrics)
 
@@ -193,6 +207,9 @@ def extract_status(payload: dict[str, Any]) -> dict[str, Any]:
         {
             "status": payload.get("status"),
             "severity": payload.get("severity"),
+            "data_mode": data_mode["data_mode"],
+            "data_mode_label": data_mode["data_mode_label"],
+            "data_mode_note": data_mode["data_mode_note"],
             "risk_score": payload.get("risk_score"),
             "source": payload.get("source"),
             "version": payload.get("version"),

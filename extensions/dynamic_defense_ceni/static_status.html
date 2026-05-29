@@ -68,7 +68,7 @@
 
     .grid {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 12px;
       margin-bottom: 16px;
     }
@@ -101,6 +101,25 @@
     .metric-value.ok,
     .metric-value.attack_detected {
       color: var(--accent);
+    }
+
+    .data-mode-value.static-demo,
+    .data-mode-note.static-demo {
+      color: var(--warning);
+    }
+
+    .data-mode-value.real-reports,
+    .data-mode-note.real-reports {
+      color: var(--ok);
+    }
+
+    .data-mode-note {
+      margin: 0 0 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-strong);
+      padding: 12px 14px;
+      font-size: 14px;
     }
 
     section {
@@ -348,7 +367,13 @@
         <div class="metric-label">数据来源</div>
         <div class="metric-value" id="source">-</div>
       </div>
+      <div class="panel">
+        <div class="metric-label">数据模式</div>
+        <div class="metric-value data-mode-value" id="data_mode_label">-</div>
+      </div>
     </div>
+
+    <div class="data-mode-note" id="data_mode_note">当前 payload 未包含数据模式字段。</div>
 
     <section class="details">
       <div class="panel">
@@ -498,6 +523,11 @@
       },
       severity: {
         critical: "严重 / critical"
+      },
+      data_mode: {
+        "static-demo": "演示数据 / static-demo",
+        "real-reports": "真实运行结果 / real-reports",
+        unknown: "未知来源 / unknown"
       }
     };
 
@@ -560,6 +590,14 @@
 
       renderStrategySwitch(payload.strategy_switch_visualization || {});
 
+      const mode = String(payload.data_mode || "unknown").toLowerCase();
+      const modeLabel = document.getElementById("data_mode_label");
+      const modeNote = document.getElementById("data_mode_note");
+      modeLabel.textContent = formatValue("data_mode", payload.data_mode_label || payload.data_mode);
+      modeLabel.className = "metric-value data-mode-value " + mode;
+      modeNote.textContent = formatValue("data_mode_note", payload.data_mode_note);
+      modeNote.className = "data-mode-note " + mode;
+
       document.getElementById("status").className = "metric-value " + String(payload.status || "").toLowerCase();
       document.getElementById("severity").className = "metric-value " + String(payload.severity || "").toLowerCase();
       setError("");
@@ -585,6 +623,10 @@
         }
       }
       renderStrategySwitch({});
+      document.getElementById("data_mode_label").textContent = "未知来源 / unknown";
+      document.getElementById("data_mode_label").className = "metric-value data-mode-value unknown";
+      document.getElementById("data_mode_note").textContent = "当前 payload 未包含数据模式字段。";
+      document.getElementById("data_mode_note").className = "data-mode-note unknown";
       document.getElementById("status").textContent = "错误 / error";
       document.getElementById("status").className = "metric-value error";
       setError(error && error.message ? error.message : "无法读取 sidecar 状态载荷。");

@@ -45,6 +45,9 @@ def test_static_demo_generates_dynamic_defense_json():
 
         assert payload["status"] == "attack_detected"
         assert payload["severity"] == "critical"
+        assert payload["data_mode"] == "static-demo"
+        assert payload["data_mode_label"] == "演示数据 / static-demo"
+        assert "未代表 attack_defender.py 正在实时运行" in payload["data_mode_note"]
         assert payload["risk_score"] == 75
         assert payload["source"] == "dynamic_defense_ceni"
         assert payload["version"] == "v1.0.1-dynamic-defense-ceni"
