@@ -43,6 +43,10 @@ def write_payload(path: Path) -> None:
     path.write_text(json.dumps(sample_payload()), encoding="utf-8")
 
 
+def write_custom_payload(path: Path, payload: dict) -> None:
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
 def test_api_health():
     with tempfile.TemporaryDirectory() as tmpdir:
         root = Path(tmpdir)
@@ -98,6 +102,32 @@ def test_api_status_reads_temp_dynamic_defense_json():
     }
     assert payload["strategy_switch_visualization"]["detector_switch"]["active_detector"] == "FlowMLP family_v3"
     assert payload["strategy_switch_visualization"]["strategy_actions"][2]["action"] == "switch_model"
+
+
+def test_api_status_preserves_real_reports_status_and_risk_score():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        input_path = root / "dynamic_defense.json"
+        real_reports_payload = sample_payload()
+        real_reports_payload.update(
+            {
+                "data_mode": "real-reports",
+                "data_mode_label": "真实运行结果 / real-reports",
+                "status": "attack_detected",
+                "severity": "critical",
+                "risk_score": 75,
+            }
+        )
+        write_custom_payload(input_path, real_reports_payload)
+        log_file = root / "actions.jsonl"
+        status_code, payload = call_api("/api/status", input_path, log_file)
+
+    assert status_code == 200
+    assert payload["data_mode"] == "real-reports"
+    assert payload["data_mode_label"] == "真实运行结果 / real-reports"
+    assert payload["status"] == "attack_detected"
+    assert payload["severity"] == "critical"
+    assert payload["risk_score"] == 75
 
 
 def test_api_status_returns_error_json_when_input_missing():

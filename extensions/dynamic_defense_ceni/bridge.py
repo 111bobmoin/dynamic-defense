@@ -135,6 +135,11 @@ def load_jsonl(path: Path) -> list[dict[str, Any]]:
     return records
 
 
+def count_lines(path: Path) -> int:
+    with path.open("r", encoding="utf-8") as handle:
+        return sum(1 for _ in handle)
+
+
 def read_ceni_outputs(project_root: Path) -> dict[str, Any]:
     paths = {name: project_root / relative_path for name, relative_path in REQUIRED_INPUTS.items()}
     missing = [str(path) for path in paths.values() if not path.exists()]
@@ -146,6 +151,7 @@ def read_ceni_outputs(project_root: Path) -> dict[str, Any]:
         "events": load_csv(paths["events"]),
         "controller_state": load_json(paths["controller_state"]),
         "execution_plan": load_jsonl(paths["execution_plan"]),
+        "execution_plan_line_count": count_lines(paths["execution_plan"]),
         "paths": {name: str(path) for name, path in paths.items()},
     }
 
@@ -183,14 +189,15 @@ def _risk_score(value: Any) -> int:
     return int(max(0, min(100, round(_as_number(value)))))
 
 
-def _severity_from_risk(risk_score: int) -> str:
-    if risk_score >= 75:
-        return "critical"
-    if risk_score >= 50:
-        return "high"
-    if risk_score >= 25:
-        return "medium"
-    return "low"
+def _accuracy_value(value: Any, default: float = 0.0) -> float:
+    if isinstance(value, dict):
+        value = _first_present(
+            _dict_value(value, "accuracy"),
+            _dict_value(value, "family"),
+            _dict_value(value, "value"),
+            _dict_value(value, "score"),
+        )
+    return _as_number(value, default)
 
 
 def _coerce_list(value: Any) -> list[Any]:
@@ -256,6 +263,7 @@ def _execution_result_from(
     status: str,
     metrics: dict[str, Any],
     execution_plan: list[dict[str, Any]],
+    execution_plan_lines: int,
     *sources: dict[str, Any],
 ) -> dict[str, Any]:
     result = copy.deepcopy(DEFAULT_EXECUTION_RESULT)
@@ -272,11 +280,26 @@ def _execution_result_from(
     result.update(
         {
             "runtime_status": _status_label(status),
+            "controller_execution_mode": str(
+                _first_present(metrics.get("controller_execution_mode"), result["controller_execution_mode"])
+            ),
             "windows": _as_int(metrics.get("windows"), result["windows"]),
             "adjustment_events": _as_int(metrics.get("adjustment_events"), result["adjustment_events"]),
+            "detection_success_rate": _as_number(
+                metrics.get("detection_success_rate"),
+                result["detection_success_rate"],
+            ),
+            "defense_success_rate": _as_number(
+                metrics.get("defense_success_rate"),
+                result["defense_success_rate"],
+            ),
             "attack_family_accuracy": _as_number(attack_type_accuracy.get("family"), result["attack_family_accuracy"]),
-            "strategy_match_accuracy": _as_number(metrics.get("strategy_match_accuracy"), result["strategy_match_accuracy"]),
-            "execution_plan_lines": len(execution_plan) if execution_plan else result["execution_plan_lines"],
+            "strategy_match_accuracy": _accuracy_value(
+                metrics.get("strategy_match_accuracy"),
+                result["strategy_match_accuracy"],
+            ),
+            "execution_plan_lines": execution_plan_lines,
+            "result_summary": "已完成真实 reports/runtime 转换：读取 dynamic_defense_summary.json、controller_state.json 和 controller_execution_plan.jsonl，生成 dynamic_defense.json。",
         }
     )
 
@@ -402,52 +425,86 @@ def build_static_demo_payload() -> dict[str, Any]:
 def transform_ceni_outputs(data: dict[str, Any]) -> dict[str, Any]:
     summary = data.get("summary") if isinstance(data.get("summary"), dict) else {}
     controller_state = data.get("controller_state") if isinstance(data.get("controller_state"), dict) else {}
+    summary_metrics = _dict_value(summary, "metrics")
+    if not isinstance(summary_metrics, dict):
+        summary_metrics = {}
+    controller_metrics = _dict_value(controller_state, "metrics")
+    if not isinstance(controller_metrics, dict):
+        controller_metrics = {}
     events = data.get("events") if isinstance(data.get("events"), list) else []
     execution_plan = data.get("execution_plan") if isinstance(data.get("execution_plan"), list) else []
+    execution_plan_lines = _as_int(data.get("execution_plan_line_count"), len(execution_plan))
     latest_event = events[-1] if events and isinstance(events[-1], dict) else {}
 
-    risk = _risk_score(
+    adjustment_events = _as_int(
         _first_present(
-            _dict_value(summary, "risk_score", "risk", "score"),
-            _dict_value(controller_state, "risk_score", "risk", "score"),
-            _dict_value(latest_event, "risk_score", "risk", "score"),
-        )
-    )
-    severity = str(
-        _first_present(
-            _dict_value(summary, "severity"),
-            _dict_value(controller_state, "severity"),
-            _dict_value(latest_event, "severity"),
-            _severity_from_risk(risk),
-        )
-    )
-    status = str(
-        _first_present(
-            _dict_value(summary, "status"),
-            _dict_value(controller_state, "status"),
-            "attack_detected" if risk >= 50 else "normal",
-        )
+            _dict_value(summary, "adjustment_events"),
+            _dict_value(summary_metrics, "adjustment_events"),
+            _dict_value(controller_state, "adjustment_events"),
+            _dict_value(controller_metrics, "adjustment_events"),
+            0,
+        ),
+        0,
     )
 
+    if adjustment_events > 0:
+        status = "attack_detected"
+        severity = "critical"
+        risk = 75
+        summary_text = f"动态防御检测到 {adjustment_events} 个策略调整事件，风险评分 {risk}，已触发动态防御响应。"
+        message = f"Dynamic defense detected {adjustment_events} adjustment event(s); risk_score={risk}"
+    else:
+        status = "normal"
+        severity = "info"
+        risk = 0
+        summary_text = "动态防御未检测到策略调整事件，风险评分 0，当前状态正常。"
+        message = "Dynamic defense detected 0 adjustment event(s); risk_score=0"
+
+    def metric_value(key: str) -> Any:
+        return _first_present(
+            _dict_value(summary, key),
+            _dict_value(summary_metrics, key),
+            _dict_value(controller_state, key),
+            _dict_value(controller_metrics, key),
+        )
+
     metrics: dict[str, Any] = {}
-    for candidate in (_dict_value(summary, "metrics"), _dict_value(controller_state, "metrics")):
+    for candidate in (summary_metrics, controller_metrics):
         if isinstance(candidate, dict):
             metrics.update(candidate)
     metrics.setdefault("event_count", len(events))
     metrics.setdefault("execution_plan_count", len(execution_plan))
+    metrics["controller_execution_mode"] = str(_first_present(metric_value("controller_execution_mode"), "stateful"))
+    metrics["execution_plan_lines"] = execution_plan_lines
 
     for key in (
         "detector",
         "optimizer",
         "windows",
-        "adjustment_events",
+        "detection_success_rate",
+        "defense_success_rate",
+        "strategy_counts",
         "attack_type_accuracy",
-        "strategy_match_accuracy",
         "detector_source_counts",
     ):
-        value = _first_present(_dict_value(summary, key), _dict_value(controller_state, key))
+        value = metric_value(key)
         if value is not None:
             metrics[key] = value
+    metrics["adjustment_events"] = adjustment_events
+
+    strategy_match_accuracy = metric_value("strategy_match_accuracy")
+    if strategy_match_accuracy is not None:
+        metrics["strategy_match_accuracy"] = _accuracy_value(strategy_match_accuracy, 0.0)
+
+    metrics.setdefault("detector", DEFAULT_MODEL_INFO["detector_mode"])
+    metrics.setdefault("optimizer", DEFAULT_MODEL_INFO["optimizer"])
+    metrics.setdefault("windows", _as_int(metric_value("windows"), 0))
+    metrics.setdefault("detection_success_rate", _as_number(metric_value("detection_success_rate"), 0.0))
+    metrics.setdefault("defense_success_rate", _as_number(metric_value("defense_success_rate"), 0.0))
+    metrics.setdefault("strategy_counts", {})
+    metrics.setdefault("attack_type_accuracy", {})
+    metrics.setdefault("strategy_match_accuracy", _accuracy_value(metric_value("strategy_match_accuracy"), 0.0))
+    metrics.setdefault("detector_source_counts", {})
 
     alerts = _coerce_list(_first_present(_dict_value(summary, "alerts"), _dict_value(controller_state, "alerts")))
     if not alerts:
@@ -478,8 +535,8 @@ def transform_ceni_outputs(data: dict[str, Any]) -> dict[str, Any]:
         "severity": severity,
         **REAL_REPORTS_MODE,
         "updated_at": str(_first_present(_dict_value(summary, "updated_at"), utc_timestamp())),
-        "summary": str(_first_present(_dict_value(summary, "summary"), "CENI dynamic defense output converted.")),
-        "message": str(_first_present(_dict_value(summary, "message"), "Converted dynamic_defense_ceni results.")),
+        "summary": summary_text,
+        "message": message,
         "metrics": metrics,
         "alerts": alerts,
         "risk_score": risk,
@@ -491,12 +548,21 @@ def transform_ceni_outputs(data: dict[str, Any]) -> dict[str, Any]:
             _first_present(
                 _dict_value(summary, "recommendation"),
                 _dict_value(controller_state, "recommendation"),
-                "Review mitigation plan and keep monitoring active.",
+                "Apply staged mitigation and continue enriched monitoring."
+                if adjustment_events > 0
+                else "Continue monitoring; no dynamic defense adjustment was required.",
             )
         ),
         "actions": actions,
         "model_info": _model_info_from(summary, controller_state),
-        "execution_result": _execution_result_from(status, metrics, [row for row in execution_plan if isinstance(row, dict)], summary, controller_state),
+        "execution_result": _execution_result_from(
+            status,
+            metrics,
+            [row for row in execution_plan if isinstance(row, dict)],
+            execution_plan_lines,
+            summary,
+            controller_state,
+        ),
         "strategy_switch_visualization": _strategy_switch_visualization_from(metrics, summary, controller_state),
         "version": str(_first_present(_dict_value(summary, "version"), VERSION)),
         "source": SOURCE,

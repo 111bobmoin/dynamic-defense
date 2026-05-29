@@ -11,30 +11,75 @@ BRIDGE = EXTENSION_DIR / "bridge.py"
 VALIDATOR = EXTENSION_DIR / "validate_bridge_output.py"
 
 
-def run_bridge(tmpdir: str) -> tuple[Path, Path]:
+def run_bridge(tmpdir: str, *, static_demo: bool = True, ceni_project_root: Path | None = None) -> tuple[Path, Path]:
     root = Path(tmpdir)
     output_dir = root / "defense_inputs"
     log_file = root / "logs" / "dynamic_defense_ceni_actions.jsonl"
+    command = [
+        sys.executable,
+        str(BRIDGE),
+        "--once",
+        "--output-dir",
+        str(output_dir),
+        "--output-file",
+        "dynamic_defense.json",
+        "--log-file",
+        str(log_file),
+    ]
+    if static_demo:
+        command.append("--static-demo")
+    if ceni_project_root is not None:
+        command.extend(["--ceni-project-root", str(ceni_project_root)])
 
     subprocess.run(
-        [
-            sys.executable,
-            str(BRIDGE),
-            "--static-demo",
-            "--once",
-            "--output-dir",
-            str(output_dir),
-            "--output-file",
-            "dynamic_defense.json",
-            "--log-file",
-            str(log_file),
-        ],
+        command,
         cwd=REPO_ROOT,
         check=True,
         capture_output=True,
         text=True,
     )
     return output_dir / "dynamic_defense.json", log_file
+
+
+def write_fake_ceni_project(root: Path) -> None:
+    reports = root / "reports"
+    runtime = root / "runtime"
+    reports.mkdir(parents=True)
+    runtime.mkdir(parents=True)
+
+    summary = {
+        "detector": "hybrid",
+        "optimizer": "actor_critic",
+        "windows": 11,
+        "adjustment_events": 11,
+        "detection_success_rate": 1.0,
+        "defense_success_rate": 1.0,
+        "strategy_counts": {
+            "s_ddos_vote_rate_limit": 5,
+            "s_bruteforce_ssh_ftp": 2,
+            "s_web_attack_strict": 2,
+            "s_benign_monitor": 1,
+            "s_portscan_isolate": 1,
+        },
+        "attack_type_accuracy": {"family": 1.0},
+        "strategy_match_accuracy": {"accuracy": 1.0},
+        "detector_source_counts": {"torch": 11},
+    }
+    (reports / "dynamic_defense_summary.json").write_text(json.dumps(summary), encoding="utf-8")
+    (reports / "dynamic_defense_events.csv").write_text(
+        "timestamp,event_type,severity,message,src,dst\n"
+        "2026-05-29T00:00:00Z,dynamic_defense_event,critical,attack detected,s3,s4\n",
+        encoding="utf-8",
+    )
+    (runtime / "controller_state.json").write_text(
+        json.dumps({"controller_execution_mode": "stateful"}),
+        encoding="utf-8",
+    )
+    plan_lines = [
+        json.dumps({"window_id": str(index), "strategy_id": "s_web_attack_strict", "action": "rate_limit"})
+        for index in range(30)
+    ]
+    (reports / "controller_execution_plan.jsonl").write_text("\n".join(plan_lines) + "\n", encoding="utf-8")
 
 
 def test_static_demo_generates_dynamic_defense_json():
@@ -107,6 +152,47 @@ def test_static_demo_generates_dynamic_defense_json():
             "rate_limit",
             "isolate_flow",
         ]
+
+
+def test_real_reports_maps_adjustment_events_to_attack_status():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        ceni_project = root / "dynamic_defense_ceni"
+        write_fake_ceni_project(ceni_project)
+        output_file, _ = run_bridge(tmpdir, static_demo=False, ceni_project_root=ceni_project)
+
+        payload = json.loads(output_file.read_text(encoding="utf-8"))
+
+        assert payload["data_mode"] == "real-reports"
+        assert payload["data_mode_label"] == "真实运行结果 / real-reports"
+        assert payload["status"] == "attack_detected"
+        assert payload["severity"] == "critical"
+        assert payload["risk_score"] == 75
+        assert payload["summary"] == "动态防御检测到 11 个策略调整事件，风险评分 75，已触发动态防御响应。"
+        assert payload["message"] == "Dynamic defense detected 11 adjustment event(s); risk_score=75"
+        assert payload["metrics"]["adjustment_events"] == 11
+        assert payload["metrics"]["execution_plan_lines"] == 30
+        assert payload["metrics"]["detector"] == "hybrid"
+        assert payload["metrics"]["optimizer"] == "actor_critic"
+        assert payload["metrics"]["windows"] == 11
+        assert payload["metrics"]["detection_success_rate"] == 1.0
+        assert payload["metrics"]["defense_success_rate"] == 1.0
+        assert payload["metrics"]["strategy_counts"]["s_ddos_vote_rate_limit"] == 5
+        assert payload["metrics"]["attack_type_accuracy"]["family"] == 1.0
+        assert payload["metrics"]["strategy_match_accuracy"] == 1.0
+        assert payload["metrics"]["detector_source_counts"] == {"torch": 11}
+        assert payload["metrics"]["controller_execution_mode"] == "stateful"
+        assert payload["execution_result"]["runtime_status"] == "发现攻击 / attack_detected"
+        assert payload["execution_result"]["controller_execution_mode"] == "stateful"
+        assert payload["execution_result"]["windows"] == 11
+        assert payload["execution_result"]["adjustment_events"] == 11
+        assert payload["execution_result"]["detection_success_rate"] == 1.0
+        assert payload["execution_result"]["defense_success_rate"] == 1.0
+        assert payload["execution_result"]["attack_family_accuracy"] == 1.0
+        assert payload["execution_result"]["strategy_match_accuracy"] == 1.0
+        assert payload["execution_result"]["execution_plan_lines"] == 30
+        assert "真实 reports/runtime 转换" in payload["execution_result"]["result_summary"]
+        assert payload["strategy_switch_visualization"]["detector_switch"]["detector_source_counts"] == {"torch": 11}
 
 
 def test_action_log_generates_jsonl():
