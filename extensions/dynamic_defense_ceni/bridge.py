@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import csv
 import json
 import os
@@ -30,6 +31,52 @@ DEFAULT_MODEL_INFO = {
     "optimizer_model_path": "models/actor_critic_policy.pt",
     "execution_mode": "REST/stateful 计划生成与状态更新",
     "version": VERSION,
+}
+DEFAULT_EXECUTION_RESULT = {
+    "runtime_status": "发现攻击 / attack_detected",
+    "controller_execution_mode": "stateful",
+    "windows": 11,
+    "adjustment_events": 11,
+    "detection_success_rate": 1.0,
+    "defense_success_rate": 1.0,
+    "attack_family_accuracy": 1.0,
+    "strategy_match_accuracy": 1.0,
+    "execution_plan_lines": 30,
+    "latest_strategy_id": "s_web_attack_strict",
+    "latest_window_id": "10",
+    "result_summary": "已完成 hybrid 检测、actor_critic 策略优化、REST/stateful 动作计划生成和 CENI JSON 输出。",
+}
+DEFAULT_STRATEGY_SWITCH_VISUALIZATION = {
+    "pipeline": [
+        {"name": "流量窗口输入", "status": "completed"},
+        {"name": "攻击特征提取", "status": "completed"},
+        {"name": "hybrid 检测源选择", "status": "completed"},
+        {"name": "攻击族识别", "status": "completed"},
+        {"name": "actor_critic 策略优化", "status": "completed"},
+        {"name": "防御动作计划生成", "status": "completed"},
+        {"name": "CENI dynamic_defense.json 输出", "status": "completed"},
+    ],
+    "detector_switch": {
+        "mode": "hybrid",
+        "active_detector": "FlowMLP family_v3",
+        "fallback_detector": "template_fallback",
+        "detector_source_counts": {"torch": 11},
+    },
+    "strategy_actions": [
+        {"action": "monitor_only", "label": "监控保持", "status": "planned"},
+        {"action": "log_enrich", "label": "日志增强", "status": "planned"},
+        {"action": "switch_model", "label": "检测模型切换", "status": "planned"},
+        {"action": "raise_threshold", "label": "阈值提升", "status": "planned"},
+        {"action": "rate_limit", "label": "限速", "status": "planned"},
+        {"action": "isolate_flow", "label": "流隔离", "status": "planned"},
+    ],
+    "strategy_counts": {
+        "s_ddos_vote_rate_limit": 5,
+        "s_bruteforce_ssh_ftp": 2,
+        "s_web_attack_strict": 2,
+        "s_benign_monitor": 1,
+        "s_portscan_isolate": 1,
+    },
 }
 
 REQUIRED_INPUTS = {
@@ -113,6 +160,15 @@ def _as_number(value: Any, default: float = 0.0) -> float:
     return default
 
 
+def _as_int(value: Any, default: int) -> int:
+    if value is None or isinstance(value, bool):
+        return default
+    try:
+        return int(float(value))
+    except (TypeError, ValueError):
+        return default
+
+
 def _risk_score(value: Any) -> int:
     return int(max(0, min(100, round(_as_number(value)))))
 
@@ -171,13 +227,81 @@ def _dict_value(data: dict[str, Any], *keys: str) -> Any:
 
 
 def _model_info_from(*sources: dict[str, Any]) -> dict[str, Any]:
-    model_info = dict(DEFAULT_MODEL_INFO)
+    model_info = copy.deepcopy(DEFAULT_MODEL_INFO)
     for source in sources:
         candidate = source.get("model_info")
         if isinstance(candidate, dict):
             model_info.update(candidate)
     model_info["version"] = str(model_info.get("version") or VERSION)
     return model_info
+
+
+def _status_label(status: str) -> str:
+    if status == "attack_detected":
+        return "发现攻击 / attack_detected"
+    return status
+
+
+def _execution_result_from(
+    status: str,
+    metrics: dict[str, Any],
+    execution_plan: list[dict[str, Any]],
+    *sources: dict[str, Any],
+) -> dict[str, Any]:
+    result = copy.deepcopy(DEFAULT_EXECUTION_RESULT)
+    for source in sources:
+        candidate = source.get("execution_result")
+        if isinstance(candidate, dict):
+            result.update(candidate)
+
+    attack_type_accuracy = metrics.get("attack_type_accuracy")
+    if not isinstance(attack_type_accuracy, dict):
+        attack_type_accuracy = {}
+
+    latest_plan = execution_plan[-1] if execution_plan else {}
+    result.update(
+        {
+            "runtime_status": _status_label(status),
+            "windows": _as_int(metrics.get("windows"), result["windows"]),
+            "adjustment_events": _as_int(metrics.get("adjustment_events"), result["adjustment_events"]),
+            "attack_family_accuracy": _as_number(attack_type_accuracy.get("family"), result["attack_family_accuracy"]),
+            "strategy_match_accuracy": _as_number(metrics.get("strategy_match_accuracy"), result["strategy_match_accuracy"]),
+            "execution_plan_lines": len(execution_plan) if execution_plan else result["execution_plan_lines"],
+        }
+    )
+
+    latest_strategy_id = _first_present(
+        _dict_value(latest_plan, "strategy_id", "strategy", "latest_strategy_id"),
+        result.get("latest_strategy_id"),
+    )
+    latest_window_id = _first_present(
+        _dict_value(latest_plan, "window_id", "window", "latest_window_id"),
+        result.get("latest_window_id"),
+    )
+    result["latest_strategy_id"] = str(latest_strategy_id)
+    result["latest_window_id"] = str(latest_window_id)
+    return result
+
+
+def _strategy_switch_visualization_from(metrics: dict[str, Any], *sources: dict[str, Any]) -> dict[str, Any]:
+    visualization = copy.deepcopy(DEFAULT_STRATEGY_SWITCH_VISUALIZATION)
+    for source in sources:
+        candidate = source.get("strategy_switch_visualization")
+        if isinstance(candidate, dict):
+            visualization.update(candidate)
+
+    detector_switch = visualization.get("detector_switch")
+    if not isinstance(detector_switch, dict):
+        detector_switch = {}
+    detector_switch.setdefault("mode", metrics.get("detector") or "hybrid")
+    detector_switch.setdefault("active_detector", "FlowMLP family_v3")
+    detector_switch.setdefault("fallback_detector", "template_fallback")
+    detector_switch["detector_source_counts"] = metrics.get("detector_source_counts") or detector_switch.get(
+        "detector_source_counts",
+        {"torch": 11},
+    )
+    visualization["detector_switch"] = detector_switch
+    return visualization
 
 
 def _event_alert(row: dict[str, Any]) -> dict[str, Any]:
@@ -256,7 +380,9 @@ def build_static_demo_payload() -> dict[str, Any]:
             "rate_limit",
             "isolate_flow",
         ],
-        "model_info": dict(DEFAULT_MODEL_INFO),
+        "model_info": copy.deepcopy(DEFAULT_MODEL_INFO),
+        "execution_result": copy.deepcopy(DEFAULT_EXECUTION_RESULT),
+        "strategy_switch_visualization": copy.deepcopy(DEFAULT_STRATEGY_SWITCH_VISUALIZATION),
         "version": VERSION,
         "source": SOURCE,
     }
@@ -358,6 +484,8 @@ def transform_ceni_outputs(data: dict[str, Any]) -> dict[str, Any]:
         ),
         "actions": actions,
         "model_info": _model_info_from(summary, controller_state),
+        "execution_result": _execution_result_from(status, metrics, [row for row in execution_plan if isinstance(row, dict)], summary, controller_state),
+        "strategy_switch_visualization": _strategy_switch_visualization_from(metrics, summary, controller_state),
         "version": str(_first_present(_dict_value(summary, "version"), VERSION)),
         "source": SOURCE,
     }

@@ -66,6 +66,34 @@ def test_static_demo_generates_dynamic_defense_json():
             "execution_mode": "REST/stateful 计划生成与状态更新",
             "version": "v1.0.1-dynamic-defense-ceni",
         }
+        assert payload["execution_result"]["runtime_status"] == "发现攻击 / attack_detected"
+        assert payload["execution_result"]["controller_execution_mode"] == "stateful"
+        assert payload["execution_result"]["windows"] == 11
+        assert payload["execution_result"]["adjustment_events"] == 11
+        assert payload["execution_result"]["detection_success_rate"] == 1.0
+        assert payload["execution_result"]["defense_success_rate"] == 1.0
+        assert payload["execution_result"]["attack_family_accuracy"] == 1.0
+        assert payload["execution_result"]["strategy_match_accuracy"] == 1.0
+        assert payload["execution_result"]["execution_plan_lines"] == 30
+        assert payload["execution_result"]["latest_strategy_id"] == "s_web_attack_strict"
+        assert payload["execution_result"]["latest_window_id"] == "10"
+        assert "REST/stateful 动作计划生成" in payload["execution_result"]["result_summary"]
+        assert payload["strategy_switch_visualization"]["pipeline"][2] == {
+            "name": "hybrid 检测源选择",
+            "status": "completed",
+        }
+        assert payload["strategy_switch_visualization"]["detector_switch"] == {
+            "mode": "hybrid",
+            "active_detector": "FlowMLP family_v3",
+            "fallback_detector": "template_fallback",
+            "detector_source_counts": {"torch": 11},
+        }
+        assert payload["strategy_switch_visualization"]["strategy_actions"][2] == {
+            "action": "switch_model",
+            "label": "检测模型切换",
+            "status": "planned",
+        }
+        assert payload["strategy_switch_visualization"]["strategy_counts"]["s_web_attack_strict"] == 2
         assert payload["affected_links"] == ["s3-s4", "s4-s7"]
         assert payload["affected_nodes"] == ["s3", "s4", "s7"]
         assert payload["actions"] == [

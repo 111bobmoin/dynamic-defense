@@ -6,15 +6,19 @@
   <title>dynamic_defense_ceni 接入状态</title>
   <style>
     :root {
-      color-scheme: light;
-      --bg: #f5f7fa;
-      --panel: #ffffff;
-      --text: #18202a;
-      --muted: #607080;
-      --line: #d9e1ea;
-      --accent: #0f766e;
-      --danger: #b42318;
-      --code: #eef3f7;
+      color-scheme: dark;
+      --bg: #07111f;
+      --panel: #0d1b2a;
+      --panel-strong: #10263a;
+      --text: #e5f2ff;
+      --muted: #8aa4bd;
+      --line: #1d3b53;
+      --accent: #22d3ee;
+      --accent-strong: #38bdf8;
+      --danger: #fb7185;
+      --ok: #5eead4;
+      --warning: #fbbf24;
+      --code: #06101c;
     }
 
     * {
@@ -94,7 +98,8 @@
       color: var(--danger);
     }
 
-    .metric-value.ok {
+    .metric-value.ok,
+    .metric-value.attack_detected {
       color: var(--accent);
     }
 
@@ -133,6 +138,13 @@
       font-size: 13px;
     }
 
+    h3 {
+      margin: 18px 0 10px;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
     pre {
       margin: 0;
       max-height: 360px;
@@ -151,10 +163,112 @@
       display: none;
       margin: 0 0 16px;
       padding: 12px 14px;
-      border: 1px solid #f0b8b2;
+      border: 1px solid #8f3a45;
       border-radius: 8px;
-      background: #fff4f2;
+      background: #2a1118;
       color: var(--danger);
+    }
+
+    .execution-grid {
+      grid-template-columns: minmax(210px, 0.35fr) minmax(0, 1fr);
+    }
+
+    .pipeline {
+      display: flex;
+      gap: 10px;
+      align-items: stretch;
+      overflow-x: auto;
+      padding: 4px 0 10px;
+    }
+
+    .pipeline-node {
+      min-width: 165px;
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      background: var(--panel-strong);
+      padding: 12px;
+      color: var(--text);
+      box-shadow: inset 0 0 0 1px rgba(34, 211, 238, 0.12);
+    }
+
+    .pipeline-node.completed {
+      border-color: var(--ok);
+      box-shadow: 0 0 0 1px rgba(94, 234, 212, 0.2), inset 0 0 18px rgba(34, 211, 238, 0.1);
+    }
+
+    .pipeline-node-name {
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .pipeline-node-status,
+    .pipeline-node-meta {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    }
+
+    .pipeline-arrow {
+      display: flex;
+      align-items: center;
+      color: var(--accent);
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .detector-switch-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .switch-item {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--code);
+      padding: 12px;
+    }
+
+    .switch-label {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+
+    .switch-value {
+      overflow-wrap: anywhere;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 13px;
+    }
+
+    .chip-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .action-chip {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--code);
+      color: var(--text);
+      padding: 7px 10px;
+      font-size: 13px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    }
+
+    .action-chip.switch-model {
+      border-color: var(--warning);
+      color: var(--warning);
+      background: #241c0a;
+    }
+
+    .disclaimer {
+      margin-bottom: 14px;
+      color: var(--warning);
+      font-size: 14px;
     }
 
     @media (max-width: 860px) {
@@ -169,6 +283,10 @@
       }
 
       .grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .detector-switch-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
@@ -192,6 +310,10 @@
       }
 
       dl {
+        grid-template-columns: 1fr;
+      }
+
+      .detector-switch-grid {
         grid-template-columns: 1fr;
       }
     }
@@ -269,6 +391,56 @@
     </section>
 
     <section class="panel">
+      <h2>动态防御执行结果</h2>
+      <dl class="execution-grid">
+        <dt>运行状态</dt><dd id="exec_runtime_status">-</dd>
+        <dt>controller_execution_mode</dt><dd id="exec_controller_execution_mode">-</dd>
+        <dt>windows</dt><dd id="exec_windows">-</dd>
+        <dt>adjustment_events</dt><dd id="exec_adjustment_events">-</dd>
+        <dt>detection_success_rate</dt><dd id="exec_detection_success_rate">-</dd>
+        <dt>defense_success_rate</dt><dd id="exec_defense_success_rate">-</dd>
+        <dt>attack_family_accuracy</dt><dd id="exec_attack_family_accuracy">-</dd>
+        <dt>strategy_match_accuracy</dt><dd id="exec_strategy_match_accuracy">-</dd>
+        <dt>execution_plan_lines</dt><dd id="exec_execution_plan_lines">-</dd>
+        <dt>latest_strategy_id</dt><dd id="exec_latest_strategy_id">-</dd>
+        <dt>latest_window_id</dt><dd id="exec_latest_window_id">-</dd>
+        <dt>result_summary</dt><dd id="exec_result_summary">-</dd>
+      </dl>
+    </section>
+
+    <section class="panel">
+      <h2>体系策略切换可视化</h2>
+      <div class="disclaimer">当前展示的是 REST/stateful 动作计划生成与状态更新，不执行真实 tc / iptables / ovs-ofctl。</div>
+      <div class="pipeline" id="pipeline"></div>
+
+      <h3>hybrid 检测源选择</h3>
+      <div class="detector-switch-grid">
+        <div class="switch-item">
+          <div class="switch-label">mode</div>
+          <div class="switch-value" id="switch_mode">-</div>
+        </div>
+        <div class="switch-item">
+          <div class="switch-label">active_detector</div>
+          <div class="switch-value" id="switch_active_detector">-</div>
+        </div>
+        <div class="switch-item">
+          <div class="switch-label">fallback_detector</div>
+          <div class="switch-value" id="switch_fallback_detector">-</div>
+        </div>
+        <div class="switch-item">
+          <div class="switch-label">detector_source_counts</div>
+          <div class="switch-value" id="switch_detector_source_counts">-</div>
+        </div>
+      </div>
+
+      <h3>防御动作计划</h3>
+      <div class="chip-list" id="strategyActions"></div>
+
+      <h3>策略命中统计</h3>
+      <pre id="strategyCounts">{}</pre>
+    </section>
+
+    <section class="panel">
       <h2>最近动作日志</h2>
       <pre id="logs">[]</pre>
     </section>
@@ -303,6 +475,21 @@
       "optimizer_model_path",
       "execution_mode",
       "version"
+    ];
+
+    const executionFields = [
+      "runtime_status",
+      "controller_execution_mode",
+      "windows",
+      "adjustment_events",
+      "detection_success_rate",
+      "defense_success_rate",
+      "attack_family_accuracy",
+      "strategy_match_accuracy",
+      "execution_plan_lines",
+      "latest_strategy_id",
+      "latest_window_id",
+      "result_summary"
     ];
 
     const displayNames = {
@@ -363,6 +550,16 @@
         }
       }
 
+      const executionResult = payload.execution_result || {};
+      for (const field of executionFields) {
+        const element = document.getElementById("exec_" + field);
+        if (element) {
+          element.textContent = formatValue(field, executionResult[field]);
+        }
+      }
+
+      renderStrategySwitch(payload.strategy_switch_visualization || {});
+
       document.getElementById("status").className = "metric-value " + String(payload.status || "").toLowerCase();
       document.getElementById("severity").className = "metric-value " + String(payload.severity || "").toLowerCase();
       setError("");
@@ -381,6 +578,13 @@
           element.textContent = "-";
         }
       }
+      for (const field of executionFields) {
+        const element = document.getElementById("exec_" + field);
+        if (element) {
+          element.textContent = "-";
+        }
+      }
+      renderStrategySwitch({});
       document.getElementById("status").textContent = "错误 / error";
       document.getElementById("status").className = "metric-value error";
       setError(error && error.message ? error.message : "无法读取 sidecar 状态载荷。");
@@ -388,6 +592,62 @@
 
     function renderLogs(logs) {
       document.getElementById("logs").textContent = JSON.stringify(logs, null, 2);
+    }
+
+    function renderStrategySwitch(visualization) {
+      const detectorSwitch = visualization.detector_switch || {};
+      document.getElementById("switch_mode").textContent = formatValue("mode", detectorSwitch.mode);
+      document.getElementById("switch_active_detector").textContent = formatValue("active_detector", detectorSwitch.active_detector);
+      document.getElementById("switch_fallback_detector").textContent = formatValue("fallback_detector", detectorSwitch.fallback_detector);
+      document.getElementById("switch_detector_source_counts").textContent = formatValue("detector_source_counts", detectorSwitch.detector_source_counts);
+
+      const pipeline = document.getElementById("pipeline");
+      pipeline.textContent = "";
+      const nodes = Array.isArray(visualization.pipeline) ? visualization.pipeline : [];
+      nodes.forEach((node, index) => {
+        const item = document.createElement("div");
+        item.className = "pipeline-node " + String(node.status || "");
+
+        const name = document.createElement("div");
+        name.className = "pipeline-node-name";
+        name.textContent = node.name || "-";
+        item.appendChild(name);
+
+        const status = document.createElement("div");
+        status.className = "pipeline-node-status";
+        status.textContent = node.status || "-";
+        item.appendChild(status);
+
+        if (String(node.name || "").includes("hybrid")) {
+          const meta = document.createElement("div");
+          meta.className = "pipeline-node-meta";
+          meta.textContent = "active_detector = " + formatValue("active_detector", detectorSwitch.active_detector) +
+            " / fallback_detector = " + formatValue("fallback_detector", detectorSwitch.fallback_detector) +
+            " / detector_source_counts = " + formatValue("detector_source_counts", detectorSwitch.detector_source_counts);
+          item.appendChild(meta);
+        }
+
+        pipeline.appendChild(item);
+        if (index < nodes.length - 1) {
+          const arrow = document.createElement("div");
+          arrow.className = "pipeline-arrow";
+          arrow.textContent = "→";
+          pipeline.appendChild(arrow);
+        }
+      });
+
+      const actions = document.getElementById("strategyActions");
+      actions.textContent = "";
+      const strategyActions = Array.isArray(visualization.strategy_actions) ? visualization.strategy_actions : [];
+      strategyActions.forEach((action) => {
+        const chip = document.createElement("span");
+        chip.className = "action-chip" + (action.action === "switch_model" ? " switch-model" : "");
+        const label = action.action === "switch_model" ? "检测模型切换动作计划" : (action.label || "-");
+        chip.textContent = label + " " + (action.action || "-");
+        actions.appendChild(chip);
+      });
+
+      document.getElementById("strategyCounts").textContent = JSON.stringify(visualization.strategy_counts || {}, null, 2);
     }
 
     async function refresh() {

@@ -83,6 +83,18 @@ def test_api_status_reads_temp_dynamic_defense_json():
         "execution_mode": "REST/stateful 计划生成与状态更新",
         "version": "v1.0.1-dynamic-defense-ceni",
     }
+    assert payload["execution_result"]["runtime_status"] == "发现攻击 / attack_detected"
+    assert payload["execution_result"]["controller_execution_mode"] == "stateful"
+    assert payload["execution_result"]["windows"] == 11
+    assert payload["execution_result"]["adjustment_events"] == 11
+    assert payload["execution_result"]["attack_family_accuracy"] == 1.0
+    assert payload["execution_result"]["strategy_match_accuracy"] == 1.0
+    assert payload["strategy_switch_visualization"]["pipeline"][4] == {
+        "name": "actor_critic 策略优化",
+        "status": "completed",
+    }
+    assert payload["strategy_switch_visualization"]["detector_switch"]["active_detector"] == "FlowMLP family_v3"
+    assert payload["strategy_switch_visualization"]["strategy_actions"][2]["action"] == "switch_model"
 
 
 def test_api_status_returns_error_json_when_input_missing():
@@ -122,3 +134,7 @@ def test_static_status_html_contains_model_panel_title():
     assert "最近动作日志" in html
     assert "发现攻击 / attack_detected" in html
     assert "严重 / critical" in html
+    assert "动态防御执行结果" in html
+    assert "体系策略切换可视化" in html
+    assert "检测模型切换动作计划" in html
+    assert "REST/stateful 动作计划生成与状态更新" in html
