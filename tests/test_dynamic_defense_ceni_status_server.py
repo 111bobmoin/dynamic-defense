@@ -1,0 +1,102 @@
+import json
+import sys
+import tempfile
+from pathlib import Path
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+EXTENSION_DIR = REPO_ROOT / "extensions" / "dynamic_defense_ceni"
+sys.path.insert(0, str(EXTENSION_DIR))
+
+import status_server  # noqa: E402
+
+
+def sample_payload() -> dict:
+    return {
+        "status": "attack_detected",
+        "severity": "critical",
+        "risk_score": 75,
+        "source": "dynamic_defense_ceni",
+        "version": "v1.0.1-dynamic-defense-ceni",
+        "affected_links": ["s3-s4", "s4-s7"],
+        "affected_nodes": ["s3", "s4", "s7"],
+        "actions": ["monitor_only", "log_enrich"],
+        "metrics": {
+            "detector": "hybrid",
+            "optimizer": "actor_critic",
+            "windows": 11,
+            "adjustment_events": 11,
+            "attack_type_accuracy": {"family": 1.0},
+            "strategy_match_accuracy": 1.0,
+            "detector_source_counts": {"torch": 11},
+        },
+    }
+
+
+def call_api(route: str, input_path: Path, log_file: Path):
+    status_code, payload = status_server.handle_api_request(route, input_path, log_file)
+    return int(status_code), payload
+
+
+def write_payload(path: Path) -> None:
+    path.write_text(json.dumps(sample_payload()), encoding="utf-8")
+
+
+def test_api_health():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        input_path = root / "dynamic_defense.json"
+        write_payload(input_path)
+        log_file = root / "actions.jsonl"
+        status_code, payload = call_api("/api/health", input_path, log_file)
+
+    assert status_code == 200
+    assert payload == {"status": "ok", "service": "dynamic_defense_ceni_status_server"}
+
+
+def test_api_status_reads_temp_dynamic_defense_json():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        input_path = root / "dynamic_defense.json"
+        write_payload(input_path)
+        log_file = root / "actions.jsonl"
+        status_code, payload = call_api("/api/status", input_path, log_file)
+
+    assert status_code == 200
+    assert payload["status"] == "attack_detected"
+    assert payload["risk_score"] == 75
+    assert payload["source"] == "dynamic_defense_ceni"
+    assert payload["affected_links"] == ["s3-s4", "s4-s7"]
+    assert payload["detector"] == "hybrid"
+    assert payload["optimizer"] == "actor_critic"
+    assert payload["attack_type_accuracy_family"] == 1.0
+    assert payload["detector_source_counts"] == {"torch": 11}
+
+
+def test_api_status_returns_error_json_when_input_missing():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        input_path = root / "missing_dynamic_defense.json"
+        log_file = root / "actions.jsonl"
+        status_code, payload = call_api("/api/status", input_path, log_file)
+
+    assert status_code == 404
+    assert payload["status"] == "error"
+    assert payload["service"] == "dynamic_defense_ceni_status_server"
+    assert payload["error"] == "input_not_found"
+    assert str(input_path) == payload["input"]
+
+
+def test_api_logs_returns_list():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        input_path = root / "dynamic_defense.json"
+        write_payload(input_path)
+        log_file = root / "actions.jsonl"
+        status_server.safe_log_action(log_file, "startup", "success", "test startup")
+        status_code, payload = call_api("/api/logs", input_path, log_file)
+
+    assert status_code == 200
+    assert isinstance(payload, list)
+    assert any(entry.get("action") == "startup" for entry in payload)
+    assert any(entry.get("action") == "request" for entry in payload)

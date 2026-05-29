@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>dynamic_defense_ceni 接入状态</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7fa;
+      --panel: #ffffff;
+      --text: #18202a;
+      --muted: #607080;
+      --line: #d9e1ea;
+      --accent: #0f766e;
+      --danger: #b42318;
+      --code: #eef3f7;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+    }
+
+    main {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 40px;
+    }
+
+    header {
+      display: flex;
+      gap: 16px;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 700;
+    }
+
+    .note {
+      margin-top: 8px;
+      color: var(--muted);
+      max-width: 780px;
+    }
+
+    .refresh {
+      min-width: 180px;
+      color: var(--muted);
+      text-align: right;
+      font-size: 14px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .metric-label {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+
+    .metric-value {
+      min-height: 28px;
+      overflow-wrap: anywhere;
+      font-size: 19px;
+      font-weight: 700;
+    }
+
+    .metric-value.critical,
+    .metric-value.error {
+      color: var(--danger);
+    }
+
+    .metric-value.ok {
+      color: var(--accent);
+    }
+
+    section {
+      margin-top: 16px;
+    }
+
+    h2 {
+      margin: 0 0 12px;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .details {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    dl {
+      display: grid;
+      grid-template-columns: minmax(170px, 0.42fr) minmax(0, 1fr);
+      gap: 10px 14px;
+      margin: 0;
+    }
+
+    dt {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    dd {
+      margin: 0;
+      overflow-wrap: anywhere;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 13px;
+    }
+
+    pre {
+      margin: 0;
+      max-height: 360px;
+      overflow: auto;
+      background: var(--code);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 12px;
+      font-size: 12px;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .error-box {
+      display: none;
+      margin: 0 0 16px;
+      padding: 12px 14px;
+      border: 1px solid #f0b8b2;
+      border-radius: 8px;
+      background: #fff4f2;
+      color: var(--danger);
+    }
+
+    @media (max-width: 860px) {
+      header,
+      .details {
+        display: block;
+      }
+
+      .refresh {
+        margin-top: 10px;
+        text-align: left;
+      }
+
+      .grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .details .panel + .panel {
+        margin-top: 12px;
+      }
+    }
+
+    @media (max-width: 520px) {
+      main {
+        width: min(100% - 20px, 1180px);
+        padding-top: 18px;
+      }
+
+      h1 {
+        font-size: 23px;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      dl {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>dynamic_defense_ceni 接入状态</h1>
+        <div class="note">这是 sidecar 状态页，不修改原 dynamic_defense_dashboard。页面每 3 秒读取 sidecar 输出和 action log。</div>
+      </div>
+      <div class="refresh" id="refreshState">等待刷新</div>
+    </header>
+
+    <div class="error-box" id="errorBox"></div>
+
+    <div class="grid">
+      <div class="panel">
+        <div class="metric-label">status</div>
+        <div class="metric-value" id="status">-</div>
+      </div>
+      <div class="panel">
+        <div class="metric-label">severity</div>
+        <div class="metric-value" id="severity">-</div>
+      </div>
+      <div class="panel">
+        <div class="metric-label">risk_score</div>
+        <div class="metric-value" id="risk_score">-</div>
+      </div>
+      <div class="panel">
+        <div class="metric-label">source</div>
+        <div class="metric-value" id="source">-</div>
+      </div>
+    </div>
+
+    <section class="details">
+      <div class="panel">
+        <h2>Payload</h2>
+        <dl>
+          <dt>version</dt><dd id="version">-</dd>
+          <dt>affected_links</dt><dd id="affected_links">-</dd>
+          <dt>affected_nodes</dt><dd id="affected_nodes">-</dd>
+          <dt>actions</dt><dd id="actions">-</dd>
+        </dl>
+      </div>
+
+      <div class="panel">
+        <h2>Metrics</h2>
+        <dl>
+          <dt>detector</dt><dd id="detector">-</dd>
+          <dt>optimizer</dt><dd id="optimizer">-</dd>
+          <dt>windows</dt><dd id="windows">-</dd>
+          <dt>adjustment_events</dt><dd id="adjustment_events">-</dd>
+          <dt>attack_type_accuracy.family</dt><dd id="attack_type_accuracy_family">-</dd>
+          <dt>strategy_match_accuracy</dt><dd id="strategy_match_accuracy">-</dd>
+          <dt>detector_source_counts</dt><dd id="detector_source_counts">-</dd>
+        </dl>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>最近 action log</h2>
+      <pre id="logs">[]</pre>
+    </section>
+  </main>
+
+  <script>
+    const fields = [
+      "status",
+      "severity",
+      "risk_score",
+      "source",
+      "version",
+      "affected_links",
+      "affected_nodes",
+      "actions",
+      "detector",
+      "optimizer",
+      "windows",
+      "adjustment_events",
+      "attack_type_accuracy_family",
+      "strategy_match_accuracy",
+      "detector_source_counts"
+    ];
+
+    function formatValue(value) {
+      if (value === null || value === undefined || value === "") {
+        return "-";
+      }
+      if (Array.isArray(value) || typeof value === "object") {
+        return JSON.stringify(value);
+      }
+      return String(value);
+    }
+
+    async function getJson(path) {
+      const response = await fetch(path, {cache: "no-store"});
+      const payload = await response.json();
+      if (!response.ok) {
+        throw payload;
+      }
+      return payload;
+    }
+
+    function setError(message) {
+      const box = document.getElementById("errorBox");
+      if (!message) {
+        box.style.display = "none";
+        box.textContent = "";
+        return;
+      }
+      box.style.display = "block";
+      box.textContent = message;
+    }
+
+    function renderStatus(payload) {
+      for (const field of fields) {
+        const element = document.getElementById(field);
+        if (element) {
+          element.textContent = formatValue(payload[field]);
+        }
+      }
+
+      document.getElementById("status").className = "metric-value " + String(payload.status || "").toLowerCase();
+      document.getElementById("severity").className = "metric-value " + String(payload.severity || "").toLowerCase();
+      setError("");
+    }
+
+    function renderStatusError(error) {
+      for (const field of fields) {
+        const element = document.getElementById(field);
+        if (element) {
+          element.textContent = "-";
+        }
+      }
+      document.getElementById("status").textContent = "error";
+      document.getElementById("status").className = "metric-value error";
+      setError(error && error.message ? error.message : "无法读取 sidecar status payload。");
+    }
+
+    function renderLogs(logs) {
+      document.getElementById("logs").textContent = JSON.stringify(logs, null, 2);
+    }
+
+    async function refresh() {
+      try {
+        renderStatus(await getJson("/api/status"));
+      } catch (error) {
+        renderStatusError(error);
+      }
+
+      try {
+        renderLogs(await getJson("/api/logs"));
+      } catch (error) {
+        renderLogs([{error: "无法读取 action log", detail: error && error.message ? error.message : String(error)}]);
+      }
+
+      document.getElementById("refreshState").textContent = "最近刷新：" + new Date().toLocaleTimeString();
+    }
+
+    refresh();
+    setInterval(refresh, 3000);
+  </script>
+</body>
+</html>
