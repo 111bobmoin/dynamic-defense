@@ -21,6 +21,18 @@ DEFAULT_INPUT = "/tmp/optimize_multi_vm_runtime/defense_inputs/dynamic_defense.j
 DEFAULT_LOG_FILE = "logs/dynamic_defense_ceni_actions.jsonl"
 SERVICE_NAME = "dynamic_defense_ceni_status_server"
 STATIC_HTML = Path(__file__).resolve().parent / "static_status.html"
+VERSION = "v1.0.1-dynamic-defense-ceni"
+DEFAULT_MODEL_INFO = {
+    "detector_model_name": "FlowMLP family_v3 策略族分类器",
+    "detector_model_path": "models/torch_flow_classifier_expanded_family_v3.pt",
+    "detector_meta_path": "models/torch_flow_classifier_expanded_family_v3_meta.json",
+    "label_mode": "family",
+    "detector_mode": "hybrid",
+    "optimizer": "actor_critic",
+    "optimizer_model_path": "models/actor_critic_policy.pt",
+    "execution_mode": "REST/stateful 计划生成与状态更新",
+    "version": VERSION,
+}
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -61,6 +73,20 @@ def load_status_payload(input_path: str | Path) -> dict[str, Any]:
     return payload
 
 
+def normalize_model_info(payload: dict[str, Any], metrics: dict[str, Any]) -> dict[str, Any]:
+    model_info = dict(DEFAULT_MODEL_INFO)
+    candidate = payload.get("model_info")
+    if isinstance(candidate, dict):
+        model_info.update(candidate)
+
+    if metrics.get("detector") and not model_info.get("detector_mode"):
+        model_info["detector_mode"] = metrics["detector"]
+    if metrics.get("optimizer") and not model_info.get("optimizer"):
+        model_info["optimizer"] = metrics["optimizer"]
+    model_info["version"] = str(model_info.get("version") or payload.get("version") or VERSION)
+    return model_info
+
+
 def extract_status(payload: dict[str, Any]) -> dict[str, Any]:
     metrics = payload.get("metrics")
     if not isinstance(metrics, dict):
@@ -69,6 +95,8 @@ def extract_status(payload: dict[str, Any]) -> dict[str, Any]:
     attack_type_accuracy = metrics.get("attack_type_accuracy")
     if not isinstance(attack_type_accuracy, dict):
         attack_type_accuracy = {}
+
+    model_info = normalize_model_info(payload, metrics)
 
     return {
         "status": payload.get("status"),
@@ -95,6 +123,7 @@ def extract_status(payload: dict[str, Any]) -> dict[str, Any]:
         "attack_type_accuracy_family": attack_type_accuracy.get("family"),
         "strategy_match_accuracy": metrics.get("strategy_match_accuracy"),
         "detector_source_counts": metrics.get("detector_source_counts", {}),
+        "model_info": model_info,
     }
 
 

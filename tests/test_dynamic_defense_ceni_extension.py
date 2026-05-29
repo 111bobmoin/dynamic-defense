@@ -55,6 +55,17 @@ def test_static_demo_generates_dynamic_defense_json():
         assert payload["metrics"]["attack_type_accuracy"]["family"] == 1.0
         assert payload["metrics"]["strategy_match_accuracy"] == 1.0
         assert payload["metrics"]["detector_source_counts"] == {"torch": 11}
+        assert payload["model_info"] == {
+            "detector_model_name": "FlowMLP family_v3 策略族分类器",
+            "detector_model_path": "models/torch_flow_classifier_expanded_family_v3.pt",
+            "detector_meta_path": "models/torch_flow_classifier_expanded_family_v3_meta.json",
+            "label_mode": "family",
+            "detector_mode": "hybrid",
+            "optimizer": "actor_critic",
+            "optimizer_model_path": "models/actor_critic_policy.pt",
+            "execution_mode": "REST/stateful 计划生成与状态更新",
+            "version": "v1.0.1-dynamic-defense-ceni",
+        }
         assert payload["affected_links"] == ["s3-s4", "s4-s7"]
         assert payload["affected_nodes"] == ["s3", "s4", "s7"]
         assert payload["actions"] == [

@@ -20,6 +20,17 @@ SOURCE = "dynamic_defense_ceni"
 DEFAULT_OUTPUT_DIR = "/tmp/optimize_multi_vm_runtime/defense_inputs"
 DEFAULT_OUTPUT_FILE = "dynamic_defense.json"
 DEFAULT_LOG_FILE = "logs/dynamic_defense_ceni_actions.jsonl"
+DEFAULT_MODEL_INFO = {
+    "detector_model_name": "FlowMLP family_v3 策略族分类器",
+    "detector_model_path": "models/torch_flow_classifier_expanded_family_v3.pt",
+    "detector_meta_path": "models/torch_flow_classifier_expanded_family_v3_meta.json",
+    "label_mode": "family",
+    "detector_mode": "hybrid",
+    "optimizer": "actor_critic",
+    "optimizer_model_path": "models/actor_critic_policy.pt",
+    "execution_mode": "REST/stateful 计划生成与状态更新",
+    "version": VERSION,
+}
 
 REQUIRED_INPUTS = {
     "summary": Path("reports/dynamic_defense_summary.json"),
@@ -159,6 +170,16 @@ def _dict_value(data: dict[str, Any], *keys: str) -> Any:
     return None
 
 
+def _model_info_from(*sources: dict[str, Any]) -> dict[str, Any]:
+    model_info = dict(DEFAULT_MODEL_INFO)
+    for source in sources:
+        candidate = source.get("model_info")
+        if isinstance(candidate, dict):
+            model_info.update(candidate)
+    model_info["version"] = str(model_info.get("version") or VERSION)
+    return model_info
+
+
 def _event_alert(row: dict[str, Any]) -> dict[str, Any]:
     return {
         "timestamp": _dict_value(row, "timestamp", "time", "updated_at"),
@@ -235,6 +256,7 @@ def build_static_demo_payload() -> dict[str, Any]:
             "rate_limit",
             "isolate_flow",
         ],
+        "model_info": dict(DEFAULT_MODEL_INFO),
         "version": VERSION,
         "source": SOURCE,
     }
@@ -335,6 +357,7 @@ def transform_ceni_outputs(data: dict[str, Any]) -> dict[str, Any]:
             )
         ),
         "actions": actions,
+        "model_info": _model_info_from(summary, controller_state),
         "version": str(_first_present(_dict_value(summary, "version"), VERSION)),
         "source": SOURCE,
     }

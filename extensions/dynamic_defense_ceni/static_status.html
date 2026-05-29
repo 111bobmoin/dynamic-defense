@@ -202,7 +202,7 @@
     <header>
       <div>
         <h1>dynamic_defense_ceni 接入状态</h1>
-        <div class="note">这是 sidecar 状态页，不修改原 dynamic_defense_dashboard。页面每 3 秒读取 sidecar 输出和 action log。</div>
+        <div class="note">这是 sidecar 状态页，不修改原 dynamic_defense_dashboard。页面每 3 秒读取 sidecar 输出和动作日志。</div>
       </div>
       <div class="refresh" id="refreshState">等待刷新</div>
     </header>
@@ -211,50 +211,65 @@
 
     <div class="grid">
       <div class="panel">
-        <div class="metric-label">status</div>
+        <div class="metric-label">接入状态</div>
         <div class="metric-value" id="status">-</div>
       </div>
       <div class="panel">
-        <div class="metric-label">severity</div>
+        <div class="metric-label">告警等级</div>
         <div class="metric-value" id="severity">-</div>
       </div>
       <div class="panel">
-        <div class="metric-label">risk_score</div>
+        <div class="metric-label">风险评分</div>
         <div class="metric-value" id="risk_score">-</div>
       </div>
       <div class="panel">
-        <div class="metric-label">source</div>
+        <div class="metric-label">数据来源</div>
         <div class="metric-value" id="source">-</div>
       </div>
     </div>
 
     <section class="details">
       <div class="panel">
-        <h2>Payload</h2>
+        <h2>接入载荷</h2>
         <dl>
-          <dt>version</dt><dd id="version">-</dd>
-          <dt>affected_links</dt><dd id="affected_links">-</dd>
-          <dt>affected_nodes</dt><dd id="affected_nodes">-</dd>
-          <dt>actions</dt><dd id="actions">-</dd>
+          <dt>版本</dt><dd id="version">-</dd>
+          <dt>影响链路</dt><dd id="affected_links">-</dd>
+          <dt>影响节点</dt><dd id="affected_nodes">-</dd>
+          <dt>防御动作</dt><dd id="actions">-</dd>
         </dl>
       </div>
 
       <div class="panel">
-        <h2>Metrics</h2>
+        <h2>动态防御指标</h2>
         <dl>
-          <dt>detector</dt><dd id="detector">-</dd>
-          <dt>optimizer</dt><dd id="optimizer">-</dd>
-          <dt>windows</dt><dd id="windows">-</dd>
-          <dt>adjustment_events</dt><dd id="adjustment_events">-</dd>
-          <dt>attack_type_accuracy.family</dt><dd id="attack_type_accuracy_family">-</dd>
-          <dt>strategy_match_accuracy</dt><dd id="strategy_match_accuracy">-</dd>
-          <dt>detector_source_counts</dt><dd id="detector_source_counts">-</dd>
+          <dt>检测模式</dt><dd id="detector">-</dd>
+          <dt>策略优化器</dt><dd id="optimizer">-</dd>
+          <dt>决策窗口数</dt><dd id="windows">-</dd>
+          <dt>策略调整事件数</dt><dd id="adjustment_events">-</dd>
+          <dt>攻击族识别准确率</dt><dd id="attack_type_accuracy_family">-</dd>
+          <dt>策略匹配准确率</dt><dd id="strategy_match_accuracy">-</dd>
+          <dt>检测来源统计</dt><dd id="detector_source_counts">-</dd>
         </dl>
       </div>
     </section>
 
     <section class="panel">
-      <h2>最近 action log</h2>
+      <h2>使用模型</h2>
+      <dl>
+        <dt>检测模型</dt><dd id="model_detector_model_name">-</dd>
+        <dt>模型文件</dt><dd id="model_detector_model_path">-</dd>
+        <dt>元数据文件</dt><dd id="model_detector_meta_path">-</dd>
+        <dt>标签模式</dt><dd id="model_label_mode">-</dd>
+        <dt>检测方式</dt><dd id="model_detector_mode">-</dd>
+        <dt>策略优化器</dt><dd id="model_optimizer">-</dd>
+        <dt>策略优化模型</dt><dd id="model_optimizer_model_path">-</dd>
+        <dt>动作模式</dt><dd id="model_execution_mode">-</dd>
+        <dt>版本</dt><dd id="model_version">-</dd>
+      </dl>
+    </section>
+
+    <section class="panel">
+      <h2>最近动作日志</h2>
       <pre id="logs">[]</pre>
     </section>
   </main>
@@ -278,12 +293,36 @@
       "detector_source_counts"
     ];
 
-    function formatValue(value) {
+    const modelFields = [
+      "detector_model_name",
+      "detector_model_path",
+      "detector_meta_path",
+      "label_mode",
+      "detector_mode",
+      "optimizer",
+      "optimizer_model_path",
+      "execution_mode",
+      "version"
+    ];
+
+    const displayNames = {
+      status: {
+        attack_detected: "发现攻击 / attack_detected"
+      },
+      severity: {
+        critical: "严重 / critical"
+      }
+    };
+
+    function formatValue(field, value) {
       if (value === null || value === undefined || value === "") {
         return "-";
       }
+      if (displayNames[field] && displayNames[field][value]) {
+        return displayNames[field][value];
+      }
       if (Array.isArray(value) || typeof value === "object") {
-        return JSON.stringify(value);
+        return JSON.stringify(value, null, 0);
       }
       return String(value);
     }
@@ -312,7 +351,15 @@
       for (const field of fields) {
         const element = document.getElementById(field);
         if (element) {
-          element.textContent = formatValue(payload[field]);
+          element.textContent = formatValue(field, payload[field]);
+        }
+      }
+
+      const modelInfo = payload.model_info || {};
+      for (const field of modelFields) {
+        const element = document.getElementById("model_" + field);
+        if (element) {
+          element.textContent = formatValue(field, modelInfo[field]);
         }
       }
 
@@ -328,9 +375,15 @@
           element.textContent = "-";
         }
       }
-      document.getElementById("status").textContent = "error";
+      for (const field of modelFields) {
+        const element = document.getElementById("model_" + field);
+        if (element) {
+          element.textContent = "-";
+        }
+      }
+      document.getElementById("status").textContent = "错误 / error";
       document.getElementById("status").className = "metric-value error";
-      setError(error && error.message ? error.message : "无法读取 sidecar status payload。");
+      setError(error && error.message ? error.message : "无法读取 sidecar 状态载荷。");
     }
 
     function renderLogs(logs) {
@@ -347,7 +400,7 @@
       try {
         renderLogs(await getJson("/api/logs"));
       } catch (error) {
-        renderLogs([{error: "无法读取 action log", detail: error && error.message ? error.message : String(error)}]);
+        renderLogs([{error: "无法读取动作日志", detail: error && error.message ? error.message : String(error)}]);
       }
 
       document.getElementById("refreshState").textContent = "最近刷新：" + new Date().toLocaleTimeString();
