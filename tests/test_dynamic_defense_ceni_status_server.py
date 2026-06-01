@@ -162,6 +162,9 @@ def test_api_logs_returns_list():
 def test_static_status_html_contains_model_panel_title():
     html = STATIC_STATUS_HTML.read_text(encoding="utf-8")
 
+    assert "<h1>接入状态</h1>" in html
+    assert "<h1>dynamic_defense_ceni 接入状态</h1>" not in html
+    assert "这是 sidecar 状态页，不修改原 dynamic_defense_dashboard。页面每 3 秒读取 sidecar 输出和动作日志。" in html
     assert "<h2>使用模型</h2>" in html
     assert "动态防御指标" in html
     assert "最近动作日志" in html
