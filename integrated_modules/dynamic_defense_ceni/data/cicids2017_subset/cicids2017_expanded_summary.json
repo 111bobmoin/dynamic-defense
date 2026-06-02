@@ -1,0 +1,93 @@
+{
+  "scenario": "cicids2017_expanded",
+  "output_csv": "data/cicids2017_subset/cicids2017_expanded_scenario_ordered.csv",
+  "rows_per_class": 200,
+  "target_labels": [
+    "BENIGN",
+    "DDoS",
+    "DoS Hulk",
+    "DoS GoldenEye",
+    "DoS slowloris",
+    "DoS Slowhttptest",
+    "PortScan",
+    "FTP-Patator",
+    "SSH-Patator",
+    "Heartbleed",
+    "Web Attack Brute Force",
+    "Web Attack XSS",
+    "Web Attack Sql Injection"
+  ],
+  "label_counts": {
+    "BENIGN": 200,
+    "DDoS": 200,
+    "DoS Hulk": 200,
+    "DoS GoldenEye": 200,
+    "DoS slowloris": 200,
+    "DoS Slowhttptest": 200,
+    "PortScan": 200,
+    "FTP-Patator": 200,
+    "SSH-Patator": 200,
+    "Heartbleed": 11,
+    "Web Attack Brute Force": 200,
+    "Web Attack XSS": 200,
+    "Web Attack Sql Injection": 21
+  },
+  "total_rows": 2232,
+  "missing_labels": [],
+  "partial_labels": [
+    "Heartbleed",
+    "Web Attack Sql Injection"
+  ],
+  "ordered_by_stage": true,
+  "source_files_by_label": {
+    "BENIGN": [
+      "/home/cph/CICIDS2017/archive/Friday-WorkingHours-Afternoon-DDos.pcap_ISCX.csv"
+    ],
+    "DDoS": [
+      "/home/cph/CICIDS2017/archive/Friday-WorkingHours-Afternoon-DDos.pcap_ISCX.csv"
+    ],
+    "DoS Hulk": [
+      "/home/cph/CICIDS2017/archive/Wednesday-workingHours.pcap_ISCX.csv"
+    ],
+    "DoS GoldenEye": [
+      "/home/cph/CICIDS2017/archive/Wednesday-workingHours.pcap_ISCX.csv"
+    ],
+    "DoS slowloris": [
+      "/home/cph/CICIDS2017/archive/Wednesday-workingHours.pcap_ISCX.csv"
+    ],
+    "DoS Slowhttptest": [
+      "/home/cph/CICIDS2017/archive/Wednesday-workingHours.pcap_ISCX.csv"
+    ],
+    "PortScan": [
+      "/home/cph/CICIDS2017/archive/Friday-WorkingHours-Afternoon-PortScan.pcap_ISCX.csv"
+    ],
+    "FTP-Patator": [
+      "/home/cph/CICIDS2017/archive/Tuesday-WorkingHours.pcap_ISCX.csv"
+    ],
+    "SSH-Patator": [
+      "/home/cph/CICIDS2017/archive/Tuesday-WorkingHours.pcap_ISCX.csv"
+    ],
+    "Heartbleed": [
+      "/home/cph/CICIDS2017/archive/Wednesday-workingHours.pcap_ISCX.csv"
+    ],
+    "Web Attack Brute Force": [
+      "/home/cph/CICIDS2017/archive/Thursday-WorkingHours-Morning-WebAttacks.pcap_ISCX.csv"
+    ],
+    "Web Attack XSS": [
+      "/home/cph/CICIDS2017/archive/Thursday-WorkingHours-Morning-WebAttacks.pcap_ISCX.csv"
+    ],
+    "Web Attack Sql Injection": [
+      "/home/cph/CICIDS2017/archive/Thursday-WorkingHours-Morning-WebAttacks.pcap_ISCX.csv"
+    ]
+  },
+  "scanned_files": [
+    "/home/cph/CICIDS2017/archive/Friday-WorkingHours-Afternoon-DDos.pcap_ISCX.csv",
+    "/home/cph/CICIDS2017/archive/Friday-WorkingHours-Afternoon-PortScan.pcap_ISCX.csv",
+    "/home/cph/CICIDS2017/archive/Friday-WorkingHours-Morning.pcap_ISCX.csv",
+    "/home/cph/CICIDS2017/archive/Monday-WorkingHours.pcap_ISCX.csv",
+    "/home/cph/CICIDS2017/archive/Thursday-WorkingHours-Afternoon-Infilteration.pcap_ISCX.csv",
+    "/home/cph/CICIDS2017/archive/Thursday-WorkingHours-Morning-WebAttacks.pcap_ISCX.csv",
+    "/home/cph/CICIDS2017/archive/Tuesday-WorkingHours.pcap_ISCX.csv",
+    "/home/cph/CICIDS2017/archive/Wednesday-workingHours.pcap_ISCX.csv"
+  ]
+}
