@@ -240,6 +240,18 @@ def cache_file_for(name: str) -> Path:
     return RUNTIME_CACHE_DIR / f"{name}.json"
 
 
+def load_persistent_cache_payload(name: str) -> dict[str, Any] | None:
+    path = cache_file_for(name)
+    if not path.exists():
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    cached = payload.get("payload")
+    return cached if isinstance(cached, dict) else None
+
+
 def load_persistent_cache(name: str, key: tuple[str, ...]) -> dict[str, Any] | None:
     path = cache_file_for(name)
     if not path.exists():
@@ -312,6 +324,33 @@ def read_cached_detail(key: tuple[str, ...]) -> dict[str, Any] | None:
 
 def is_default_dataset(dataset_path: Path) -> bool:
     return dataset_path.resolve() == DEFAULT_DATASET.resolve()
+
+
+def should_use_legacy_multi3_cache(dataset_path: Path) -> bool:
+    return is_default_dataset(dataset_path) and not file_exists(dataset_path)
+
+
+def missing_dataset_summary(dataset_path: Path) -> dict[str, Any]:
+    return {
+        "path": str(dataset_path),
+        "rows": 0,
+        "feature_count": 0,
+        "label_count": 0,
+        "top_labels": [],
+        "headers": [],
+    }
+
+
+def read_legacy_multi3_detail(spec: ModalitySpec, dataset_path: Path) -> dict[str, Any] | None:
+    if not should_use_legacy_multi3_cache(dataset_path):
+        return None
+    model_path = MUTI3_DIR / spec.model_path
+    cache_key = cache_key_for(f"muti3_{spec.key}_detail", [model_path, dataset_path])
+    cached = load_persistent_cache_payload(cache_key[0])
+    if cached:
+        with DETAIL_CACHE_LOCK:
+            DETAIL_CACHE[cache_key] = cached
+    return cached if isinstance(cached, dict) else None
 
 
 def waiting_model_detail(spec: ModalitySpec, dataset_meta: dict[str, Any]) -> dict[str, Any]:
@@ -939,6 +978,11 @@ def evaluate_multi3_detail(spec: ModalitySpec, dataset_path: Path) -> dict[str, 
     model_path = MUTI3_DIR / spec.model_path
     dataset_path = dataset_path.resolve()
     cache_key = cache_key_for(f"muti3_{spec.key}_detail", [model_path, dataset_path])
+    legacy_cached = read_legacy_multi3_detail(spec, dataset_path)
+    if legacy_cached:
+        return legacy_cached
+    if should_use_legacy_multi3_cache(dataset_path):
+        return waiting_model_detail(spec, missing_dataset_summary(dataset_path))
 
     def build() -> dict[str, Any]:
         started = time.time()
@@ -1036,12 +1080,19 @@ def build_multi3_section(dataset_path: Path, allow_partial: bool = False) -> dic
     cached_details: list[dict[str, Any]] = []
     if allow_partial and is_default_dataset(dataset_path):
         for spec in MODALITY_SPECS:
-            model_path = MUTI3_DIR / spec.model_path
-            cache_key = cache_key_for(f"muti3_{spec.key}_detail", [model_path, dataset_path])
-            cached = read_cached_detail(cache_key)
+            cached = evaluate_multi3_detail(spec, dataset_path) if should_use_legacy_multi3_cache(dataset_path) else None
+            if not cached:
+                model_path = MUTI3_DIR / spec.model_path
+                cache_key = cache_key_for(f"muti3_{spec.key}_detail", [model_path, dataset_path])
+                cached = read_cached_detail(cache_key)
             if cached:
                 cached_details.append(cached)
-        dataset_meta = cached_details[0]["dataset"] if cached_details else dataset_summary(dataset_path)
+        if cached_details:
+            dataset_meta = cached_details[0]["dataset"]
+        elif file_exists(dataset_path):
+            dataset_meta = dataset_summary(dataset_path)
+        else:
+            dataset_meta = missing_dataset_summary(dataset_path)
         cached_by_key = {detail["key"]: detail for detail in cached_details}
         for spec in MODALITY_SPECS:
             details.append(cached_by_key.get(spec.key) or waiting_model_detail(spec, dataset_meta))
@@ -1058,7 +1109,12 @@ def build_multi3_section(dataset_path: Path, allow_partial: bool = False) -> dic
     else:
         status = "waiting"
         runtime_message = f"muti3 缓存预热中，已就绪 {ready}/{len(details)} 个模型。"
-    dataset_meta = next((detail["dataset"] for detail in details if detail.get("dataset")), dataset_summary(dataset_path))
+    if any(detail.get("dataset") for detail in details):
+        dataset_meta = next(detail["dataset"] for detail in details if detail.get("dataset"))
+    elif file_exists(dataset_path):
+        dataset_meta = dataset_summary(dataset_path)
+    else:
+        dataset_meta = missing_dataset_summary(dataset_path)
     return {
         "key": "muti3",
         "title": "攻击数据特征检测异构组件（muti3）",
@@ -1221,7 +1277,12 @@ def get_section_detail(section: str, dataset_path: Path) -> dict[str, Any]:
         raise KeyError(f"unknown section detail: {section}")
 
     ready = sum(1 for model in models if model["status"] == "ready")
-    dataset_meta = models[0]["dataset"] if models else dataset_summary(dataset_path)
+    if models:
+        dataset_meta = models[0]["dataset"]
+    elif file_exists(dataset_path):
+        dataset_meta = dataset_summary(dataset_path)
+    else:
+        dataset_meta = missing_dataset_summary(dataset_path)
     return {
         "generated_at": utc_now_iso(),
         "section": section,
