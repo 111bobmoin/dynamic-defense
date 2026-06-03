@@ -1,0 +1,70 @@
+{
+  "run_index": 5,
+  "run_seed": 2026051205,
+  "sample_root": "outputs\\experiments\\multi13_five_runs_20260529\\run_05_seed_2026051205\\samples",
+  "params": {
+    "decision_threshold": 0.55,
+    "anomaly_threshold": 0.65,
+    "role_threshold": 0.65,
+    "min_role_total_flows": 60,
+    "min_role_anomaly_ratio": 0.5,
+    "min_role_high_conf_flows": 8,
+    "min_directional_high_conf_flows": 4,
+    "core_top_ratio": 0.3
+  },
+  "node_count_overrides": {
+    "multi_anomaly": 13
+  },
+  "multi_anomaly_anomalous_node_count": 2,
+  "scenarios": {
+    "no_anomaly": {
+      "sample_csv": "outputs\\experiments\\multi13_five_runs_20260529\\run_05_seed_2026051205\\samples\\no_anomaly\\cicids2017_no_anomaly_sample.csv",
+      "predictions_csv": "outputs\\experiments\\multi13_five_runs_20260529\\run_05_seed_2026051205\\samples\\no_anomaly\\cicids2017_no_anomaly_predictions.csv",
+      "summary_csv": "outputs\\experiments\\multi13_five_runs_20260529\\run_05_seed_2026051205\\samples\\no_anomaly\\cicids2017_no_anomaly_summary.csv",
+      "report_json": "outputs\\experiments\\multi13_five_runs_20260529\\run_05_seed_2026051205\\samples\\no_anomaly\\no_anomaly_report.json",
+      "repair_csv": "outputs\\experiments\\multi13_five_runs_20260529\\run_05_seed_2026051205\\samples\\no_anomaly\\cicids2017_no_anomaly_repair_order.csv",
+      "repair_json": "outputs\\experiments\\multi13_five_runs_20260529\\run_05_seed_2026051205\\samples\\no_anomaly\\cicids2017_no_anomaly_repair_report.json",
+      "benign_fp": 0.0,
+      "repair_order_len": 0,
+      "window_false_positive_rate": 0.0,
+      "node_false_positive_rate_any_window": 0.0,
+      "flow_false_positive_rate": 0.175
+    },
+    "single_anomaly": {
+      "sample_csv": "outputs\\experiments\\multi13_five_runs_20260529\\run_05_seed_2026051205\\samples\\single_anomaly\\cicids2017_single_anomaly_sample.csv",
+      "predictions_csv": "outputs\\experiments\\multi13_five_runs_20260529\\run_05_seed_2026051205\\samples\\single_anomaly\\cicids2017_single_anomaly_predictions.csv",
+      "summary_csv": "outputs\\experiments\\multi13_five_runs_20260529\\run_05_seed_2026051205\\samples\\single_anomaly\\cicids2017_single_anomaly_summary.csv",
+      "report_json": "outputs\\experiments\\multi13_five_runs_20260529\\run_05_seed_2026051205\\samples\\single_anomaly\\single_anomaly_report.json",
+      "repair_csv": "outputs\\experiments\\multi13_five_runs_20260529\\run_05_seed_2026051205\\samples\\single_anomaly\\cicids2017_single_anomaly_repair_order.csv",
+      "repair_json": "outputs\\experiments\\multi13_five_runs_20260529\\run_05_seed_2026051205\\samples\\single_anomaly\\cicids2017_single_anomaly_repair_report.json",
+      "benign_fp": 0.0,
+      "repair_order_len": 1,
+      "overall_accuracy": 1.0,
+      "true_anomaly_rank": 1,
+      "true_anomaly_rank_ratio": 1.0,
+      "true_anomaly_in_top_20pct": true
+    },
+    "multi_anomaly": {
+      "sample_csv": "outputs\\experiments\\multi13_five_runs_20260529\\run_05_seed_2026051205\\samples\\multi_anomaly\\cicids2017_multi_anomaly_sample.csv",
+      "predictions_csv": "outputs\\experiments\\multi13_five_runs_20260529\\run_05_seed_2026051205\\samples\\multi_anomaly\\cicids2017_multi_anomaly_predictions.csv",
+      "summary_csv": "outputs\\experiments\\multi13_five_runs_20260529\\run_05_seed_2026051205\\samples\\multi_anomaly\\cicids2017_multi_anomaly_summary.csv",
+      "report_json": "outputs\\experiments\\multi13_five_runs_20260529\\run_05_seed_2026051205\\samples\\multi_anomaly\\multi_anomaly_report.json",
+      "repair_csv": "outputs\\experiments\\multi13_five_runs_20260529\\run_05_seed_2026051205\\samples\\multi_anomaly\\cicids2017_multi_anomaly_repair_order.csv",
+      "repair_json": "outputs\\experiments\\multi13_five_runs_20260529\\run_05_seed_2026051205\\samples\\multi_anomaly\\cicids2017_multi_anomaly_repair_report.json",
+      "benign_fp": 0.0,
+      "repair_order_len": 2,
+      "overall_accuracy": 1.0,
+      "true_anomaly_nodes": 2,
+      "true_anomaly_nodes_in_repair": 2,
+      "true_anomaly_recall_in_repair": 1.0
+    }
+  },
+  "pass_flags": {
+    "no_anomaly_fp": true,
+    "single_anomaly_fp": true,
+    "single_anomaly_rank": true,
+    "multi_anomaly_fp": true,
+    "multi_anomaly_recall": true
+  },
+  "all_passed": true
+}

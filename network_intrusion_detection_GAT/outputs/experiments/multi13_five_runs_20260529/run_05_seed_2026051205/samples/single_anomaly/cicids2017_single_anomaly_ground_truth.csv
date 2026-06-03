@@ -1,0 +1,6 @@
+﻿node_id,ground_truth_role
+172.16.50.50,suspected_compromised_host
+172.16.50.60,uncertain
+172.16.50.61,uncertain
+172.16.50.62,uncertain
+172.16.50.63,uncertain

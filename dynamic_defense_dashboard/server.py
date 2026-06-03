@@ -14,6 +14,7 @@ import time
 from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from itertools import cycle
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -33,7 +34,11 @@ STATIC_DIR = BASE_DIR / "static"
 MUTI3_DIR = PROJECT_ROOT / "muti3"
 LOG_DIR = PROJECT_ROOT / "log" / "TEST_main"
 GRAPH_DIR = PROJECT_ROOT / "graph"
-DEFAULT_DATASET = MUTI3_DIR / "Dataset" / "validata.csv"
+GAT_DIR = PROJECT_ROOT / "network_intrusion_detection_GAT"
+GAT_RESULTS_DIR = GAT_DIR / "outputs" / "results"
+GAT_TRAINING_DIR = GAT_DIR / "outputs" / "training"
+GAT_VERIFICATION_DIR = GAT_DIR / "outputs" / "verification" / "existing_samples"
+DEFAULT_DATASET = MUTI3_DIR / "Dataset" / "validata_sample.csv"
 TOPOLOGY_IMAGE = PROJECT_ROOT / "网络拓扑图.png"
 RUNTIME_CACHE_DIR = BASE_DIR / ".runtime_cache"
 
@@ -41,6 +46,11 @@ DETAIL_CACHE_LOCK = threading.Lock()
 DETAIL_CACHE: dict[tuple[str, ...], dict[str, Any]] = {}
 PAYLOAD_CACHE_LOCK = threading.Lock()
 PAYLOAD_CACHE: dict[tuple[str, ...], dict[str, Any]] = {}
+GAT_SCENARIO_LOCK = threading.Lock()
+GAT_SCENARIO_CYCLE: Any = None
+PINNED_GAT_EXPERIMENT_DIR = GAT_DIR / "outputs" / "experiments" / "multi13_five_runs_20260529"
+PINNED_GAT_SCENARIO = "multi_anomaly"
+PINNED_GAT_ROTATION_SECONDS = 12
 
 
 @dataclass(frozen=True)
@@ -100,6 +110,13 @@ GRAPH_LABELS = ["normal", "anomaly"]
 
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def file_mtime_iso(path: Path) -> str:
+    try:
+        return datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).isoformat().replace("+00:00", "Z")
+    except OSError:
+        return utc_now_iso()
 
 
 def safe_float(value: Any) -> float | None:
@@ -227,6 +244,10 @@ def load_csv_records(dataset_path: Path) -> list[dict[str, Any]]:
         return list(csv.DictReader(handle))
 
 
+def normalize_record_keys(record: dict[str, Any]) -> dict[str, Any]:
+    return {str(key).lstrip("\ufeff"): value for key, value in record.items()}
+
+
 def cache_key_for(name: str, paths: list[Path]) -> tuple[str, ...]:
     tokens: list[str] = [name]
     for path in paths:
@@ -238,18 +259,6 @@ def cache_key_for(name: str, paths: list[Path]) -> tuple[str, ...]:
 
 def cache_file_for(name: str) -> Path:
     return RUNTIME_CACHE_DIR / f"{name}.json"
-
-
-def load_persistent_cache_payload(name: str) -> dict[str, Any] | None:
-    path = cache_file_for(name)
-    if not path.exists():
-        return None
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return None
-    cached = payload.get("payload")
-    return cached if isinstance(cached, dict) else None
 
 
 def load_persistent_cache(name: str, key: tuple[str, ...]) -> dict[str, Any] | None:
@@ -326,31 +335,633 @@ def is_default_dataset(dataset_path: Path) -> bool:
     return dataset_path.resolve() == DEFAULT_DATASET.resolve()
 
 
-def should_use_legacy_multi3_cache(dataset_path: Path) -> bool:
-    return is_default_dataset(dataset_path) and not file_exists(dataset_path)
+def load_json_file(path: Path) -> dict[str, Any]:
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
-def missing_dataset_summary(dataset_path: Path) -> dict[str, Any]:
+def safe_int(value: Any) -> int | None:
+    try:
+        return int(float(value))
+    except (TypeError, ValueError):
+        return None
+
+
+def boolish(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    return str(value).strip().lower() in {"1", "true", "yes"}
+
+
+def active_defense_route() -> list[str]:
+    return ["host1", "m1", "m3", "m4", "m7", "server1"]
+
+
+def normalize_gat_role(role: str | None) -> str:
+    normalized = (role or "").strip()
+    if normalized in {"suspected_attacker", "suspected_victim", "suspected_compromised_host", "uncertain"}:
+        return normalized
+    return "uncertain"
+
+
+def locate_best_gat_result() -> tuple[Path, dict[str, Any], dict[str, Any]] | None:
+    if GAT_RESULTS_DIR.exists():
+        candidates = sorted(
+            [path for path in GAT_RESULTS_DIR.iterdir() if path.is_dir()],
+            key=lambda item: item.stat().st_mtime_ns,
+            reverse=True,
+        )
+        for result_dir in candidates:
+            manifest_path = result_dir / "manifest.json"
+            repair_manifest_path = result_dir / "repair_plan" / "repair_plan_manifest.json"
+            if not file_exists(manifest_path) or not file_exists(repair_manifest_path):
+                continue
+            try:
+                manifest = load_json_file(manifest_path)
+                repair_manifest = load_json_file(repair_manifest_path)
+            except (OSError, json.JSONDecodeError):
+                continue
+            files = repair_manifest.get("files") or []
+            best_entry = None
+            best_cost = -1.0
+            for entry in files:
+                cost = float(entry.get("minimum_cost") or 0.0)
+                rows = safe_int(entry.get("anomalous_node_count")) or 0
+                if cost > best_cost and rows > 0:
+                    best_cost = cost
+                    best_entry = entry
+            if best_entry:
+                return result_dir, manifest, best_entry
+    if GAT_VERIFICATION_DIR.exists():
+        fallback_order = ["multi_anomaly", "single_anomaly", "no_anomaly"]
+        for sample_name in fallback_order:
+            sample_dir = GAT_VERIFICATION_DIR / sample_name
+            repair_report_path = sample_dir / "repair_report.json"
+            if not file_exists(repair_report_path):
+                continue
+            try:
+                repair_report = load_json_file(repair_report_path)
+            except (OSError, json.JSONDecodeError):
+                continue
+            if float(repair_report.get("minimum_cost") or 0.0) > 0:
+                manifest = {
+                    "created_at": utc_now_iso(),
+                    "input_path": str(sample_dir / "summary.csv"),
+                    "model_path": "",
+                    "output_dir": str(sample_dir),
+                    "args": {
+                        "core_top_ratio": repair_report.get("core_top_ratio"),
+                    },
+                }
+                entry = {
+                    "input_node_summary_csv": str(sample_dir / "summary.csv"),
+                    "repair_order_csv": str(sample_dir / "repair_order.csv"),
+                    "total_node_count": repair_report.get("total_node_count"),
+                    "anomalous_node_count": repair_report.get("anomalous_node_count"),
+                    "core_node_count": repair_report.get("core_node_count"),
+                    "formula_denominator": repair_report.get("formula_denominator"),
+                    "minimum_cost": repair_report.get("minimum_cost"),
+                    "core_nodes": repair_report.get("core_nodes") or [],
+                    "repair_order": repair_report.get("repair_order") or [],
+                    "formula_interpretation": repair_report.get("formula_interpretation"),
+                }
+                return sample_dir, manifest, entry
+    return None
+
+
+def load_gat_node_summary(summary_path: Path) -> list[dict[str, Any]]:
+    if not file_exists(summary_path):
+        return []
+    return [normalize_record_keys(record) for record in load_csv_records(summary_path)]
+
+
+def build_gat_display_nodes(node_rows: list[dict[str, Any]], node_order: list[str]) -> list[dict[str, Any]]:
+    allowed_node_ids = set(node_order)
+    indexed: dict[str, dict[str, Any]] = {}
+    for row in node_rows:
+        node_id = str(row.get("node_id") or "--")
+        if node_id not in allowed_node_ids or node_id in indexed:
+            continue
+        indexed[node_id] = row
+    return [indexed[node_id] for node_id in node_order if node_id in indexed]
+
+
+def load_gat_repair_order(repair_csv_path: Path, embedded: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
+    if embedded:
+        return embedded
+    if not file_exists(repair_csv_path):
+        return []
+    return load_csv_records(repair_csv_path)
+
+
+def display_relative_path(path: Path) -> str:
+    try:
+        return str(path.relative_to(PROJECT_ROOT))
+    except ValueError:
+        return str(path)
+
+
+def pinned_gat_rotation_index(sample_count: int) -> int:
+    if sample_count <= 1:
+        return 0
+    return int(time.time() // PINNED_GAT_ROTATION_SECONDS) % sample_count
+
+
+def load_pinned_gat_experiment_samples() -> list[tuple[Path, dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]]:
+    manifest_path = PINNED_GAT_EXPERIMENT_DIR / "experiment_manifest.json"
+    if not file_exists(manifest_path):
+        return []
+    try:
+        experiment_manifest = load_json_file(manifest_path)
+    except (OSError, json.JSONDecodeError):
+        return []
+
+    run_entries = sorted(
+        list(experiment_manifest.get("runs_detail") or []),
+        key=lambda item: safe_int(item.get("run_index")) or 0,
+    )
+    samples: list[tuple[Path, dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]] = []
+    for run_entry in run_entries:
+        if not boolish(run_entry.get("all_passed")):
+            continue
+        sample_root_raw = run_entry.get("sample_root")
+        if not sample_root_raw:
+            continue
+        sample_dir = (GAT_DIR / str(sample_root_raw) / PINNED_GAT_SCENARIO).resolve()
+        sample_manifest_path = sample_dir / "sample_manifest.json"
+        repair_report_path = sample_dir / "cicids2017_multi_anomaly_repair_report.json"
+        evaluation_report_path = sample_dir / "multi_anomaly_report.json"
+        if not file_exists(sample_manifest_path) or not file_exists(repair_report_path) or not file_exists(evaluation_report_path):
+            continue
+        try:
+            sample_manifest = load_json_file(sample_manifest_path)
+            repair_report = load_json_file(repair_report_path)
+            evaluation_report = load_json_file(evaluation_report_path)
+        except (OSError, json.JSONDecodeError):
+            continue
+        samples.append((sample_dir, experiment_manifest, run_entry, sample_manifest, repair_report, evaluation_report))
+    return samples
+
+
+def locate_pinned_gat_experiment_sample() -> tuple[Path, dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]] | None:
+    samples = load_pinned_gat_experiment_samples()
+    if not samples:
+        return None
+    return samples[pinned_gat_rotation_index(len(samples))]
+
+
+def build_pinned_gat_experiment_sample() -> dict[str, Any] | None:
+    resolved = locate_pinned_gat_experiment_sample()
+    if not resolved:
+        return None
+
+    sample_dir, experiment_manifest, run_entry, sample_manifest, repair_report, evaluation_report = resolved
+    summary_path = sample_dir / "cicids2017_multi_anomaly_summary.csv"
+    repair_order_path = sample_dir / "cicids2017_multi_anomaly_repair_order.csv"
+    ground_truth_path = sample_dir / "cicids2017_multi_anomaly_ground_truth.csv"
+    sample_csv_path = sample_dir / "cicids2017_multi_anomaly_sample.csv"
+
+    node_rows = load_gat_node_summary(summary_path)
+    repair_rows = load_gat_repair_order(repair_order_path, repair_report.get("repair_order"))
+    manifest_node_ids = [str(item.get("node_id") or "--") for item in (sample_manifest.get("nodes") or [])]
+    displayed_nodes = build_gat_display_nodes(node_rows, manifest_node_ids)
+    if not displayed_nodes:
+        displayed_nodes = node_rows
+
+    total_node_count = safe_int(repair_report.get("total_node_count")) or safe_int(sample_manifest.get("total_nodes")) or len(displayed_nodes)
+    anomalous_node_count = (
+        safe_int(repair_report.get("anomalous_node_count"))
+        or safe_int(sample_manifest.get("requested_anomalous_node_count"))
+        or safe_int(run_entry.get("multi_anomaly_anomalous_node_count"))
+        or 0
+    )
+    minimum_cost = safe_float(repair_report.get("minimum_cost")) or 0.0
+    total_flows = safe_int(sample_manifest.get("total_flows")) or sum(safe_int(item.get("total_flows")) or 0 for item in displayed_nodes)
+    core_top_ratio = safe_float((run_entry.get("params") or {}).get("core_top_ratio") or (experiment_manifest.get("params") or {}).get("core_top_ratio")) or 0.0
+    run_name = sample_dir.parents[1].name
+    experiment_name = sample_dir.parents[2].name
+    scene_label = f"{experiment_name} · {run_name} · {total_node_count}节点"
+
+    repair_order = [
+        {
+            "repairRank": safe_int(item.get("repair_rank")),
+            "nodeId": str(item.get("node_id") or "--"),
+            "nodeRole": normalize_gat_role(item.get("node_role")),
+            "isCore": boolish(item.get("is_core")),
+            "rolePriority": safe_float(item.get("role_priority")),
+            "damageScore": safe_float(item.get("damage_score")),
+            "structuralScore": safe_float(item.get("structural_score")),
+            "coreScore": safe_float(item.get("core_score")),
+            "repairPriorityScore": safe_float(item.get("repair_priority_score")),
+            "remainingCoreAfterRepair": safe_int(item.get("remaining_core_after_repair")),
+            "topPredictedLabels": str(item.get("top_predicted_labels") or "--"),
+        }
+        for item in repair_rows
+    ]
+    nodes = [
+        {
+            "nodeId": str(item.get("node_id") or "--"),
+            "nodeRole": normalize_gat_role(item.get("node_role")),
+            "anomalyRatio": safe_float(item.get("anomaly_ratio")),
+            "avgAnomalyScore": safe_float(item.get("avg_anomaly_score")),
+            "maxAnomalyScore": safe_float(item.get("max_anomaly_score")),
+            "attackerScore": safe_float(item.get("attacker_score")),
+            "victimScore": safe_float(item.get("victim_score")),
+            "compromisedScore": safe_float(item.get("compromised_score")),
+            "totalFlows": safe_int(item.get("total_flows")),
+            "totalAnomalousFlows": safe_int(item.get("total_anomalous_flows")),
+            "roleEvidenceSupport": safe_float(item.get("role_evidence_support")),
+            "topPredictedLabels": str(item.get("top_predicted_labels") or "--"),
+        }
+        for item in displayed_nodes
+    ]
+
+    accuracy_value = safe_float(evaluation_report.get("overall_accuracy"))
+    accuracy_text = f"{accuracy_value * 100:.2f}%" if accuracy_value is not None else "--"
+    recall_value = safe_float(((run_entry.get("scenarios") or {}).get("multi_anomaly") or {}).get("true_anomaly_recall_in_repair"))
+    recall_text = f"{recall_value * 100:.2f}%" if recall_value is not None else "--"
+    top_node = repair_order[0]["nodeId"] if repair_order else "--"
+    repair_sequence = " -> ".join(item["nodeId"] for item in repair_order) or "--"
+
+    model_path = None
+    model_path_raw = experiment_manifest.get("model_path")
+    if model_path_raw:
+        candidate_path = (GAT_DIR / str(model_path_raw)).resolve()
+        model_path = candidate_path if file_exists(candidate_path) else None
+
+    interpretation = (
+        f"{experiment_name} 的 {run_name} 多异常测试结果：{total_node_count} 个关联节点中识别出 "
+        f"{anomalous_node_count} 个异常节点，最小修复代价 {minimum_cost:.4f}，首要修复节点为 {top_node}。"
+    )
     return {
-        "path": str(dataset_path),
-        "rows": 0,
-        "feature_count": 0,
-        "label_count": 0,
-        "top_labels": [],
-        "headers": [],
+        "generatedAt": file_mtime_iso(sample_dir / "cicids2017_multi_anomaly_repair_report.json"),
+        "sampleName": f"{experiment_name}_{run_name}_{PINNED_GAT_SCENARIO}",
+        "sceneLabel": scene_label,
+        "inputPath": display_relative_path(sample_csv_path),
+        "modelPath": display_relative_path(model_path) if model_path else str(sample_manifest.get("dataset_dir") or ""),
+        "interpretation": interpretation,
+        "route": active_defense_route(),
+        "totalFlows": total_flows,
+        "summary": {
+            "minimumCost": minimum_cost,
+            "totalNodeCount": total_node_count,
+            "anomalousNodeCount": anomalous_node_count,
+            "coreNodeCount": safe_int(repair_report.get("core_node_count")) or 0,
+            "repairSteps": len(repair_order),
+            "coreTopRatio": core_top_ratio,
+            "denominator": safe_float(repair_report.get("formula_denominator")) or 0.0,
+        },
+        "repairOrder": repair_order,
+        "nodes": nodes,
+        "incidents": [
+            {
+                "title": "测试场景",
+                "detail": f"{scene_label} 多异常样本测试通过，总流量 {total_flows}，异常节点均已进入修复序列。",
+            },
+            {
+                "title": "修复顺序",
+                "detail": f"当前修复顺序为 {repair_sequence}。",
+            },
+            {
+                "title": "识别效果",
+                "detail": f"节点角色识别准确率 {accuracy_text}，真实异常节点修复召回率 {recall_text}。",
+            },
+        ],
+        "_sourceSummaryPath": str(summary_path.relative_to(GAT_DIR)) if summary_path.exists() else "",
+        "_sourceRepairPath": str(repair_order_path.relative_to(GAT_DIR)) if repair_order_path.exists() else "",
+        "_sourceGroundTruthPath": str(ground_truth_path.relative_to(GAT_DIR)) if ground_truth_path.exists() else "",
     }
 
 
-def read_legacy_multi3_detail(spec: ModalitySpec, dataset_path: Path) -> dict[str, Any] | None:
-    if not should_use_legacy_multi3_cache(dataset_path):
+def locate_latest_gat_training_metrics() -> tuple[Path, dict[str, Any]] | None:
+    if not GAT_TRAINING_DIR.exists():
         return None
-    model_path = MUTI3_DIR / spec.model_path
-    cache_key = cache_key_for(f"muti3_{spec.key}_detail", [model_path, dataset_path])
-    cached = load_persistent_cache_payload(cache_key[0])
-    if cached:
-        with DETAIL_CACHE_LOCK:
-            DETAIL_CACHE[cache_key] = cached
-    return cached if isinstance(cached, dict) else None
+    candidates = sorted(
+        [path for path in GAT_TRAINING_DIR.rglob("metrics.json") if path.is_file()],
+        key=lambda item: item.stat().st_mtime_ns,
+        reverse=True,
+    )
+    for metrics_path in candidates:
+        try:
+            metrics = load_json_file(metrics_path)
+        except (OSError, json.JSONDecodeError):
+            continue
+        return metrics_path.parent, metrics
+    return None
+
+
+def build_gat_model_metrics() -> dict[str, Any]:
+    resolved = locate_latest_gat_training_metrics()
+    if not resolved:
+        return {
+            "title": "GAT Node Anomaly Detector",
+            "subtitle": "network_intrusion_detection_GAT / CICIDS2017",
+            "status": "artifact_ready",
+            "modelPath": "",
+            "bestEpoch": None,
+            "featureCount": None,
+            "validation": {},
+            "test": {},
+        }
+    training_dir, metrics = resolved
+    model_path = training_dir / "model.pt"
+    val_metrics = metrics.get("val_metrics") or {}
+    test_metrics = metrics.get("test_metrics") or {}
+    return {
+        "title": "GAT Node Anomaly Detector",
+        "subtitle": "network_intrusion_detection_GAT / CICIDS2017",
+        "status": "ready",
+        "modelPath": str(model_path.relative_to(PROJECT_ROOT)) if file_exists(model_path) else str(training_dir.relative_to(PROJECT_ROOT)),
+        "bestEpoch": safe_int(metrics.get("best_epoch")),
+        "featureCount": safe_int(metrics.get("selected_feature_count")),
+        "validation": {
+            "accuracy": safe_float(val_metrics.get("accuracy")),
+            "precision": safe_float(val_metrics.get("macro_precision")),
+            "recall": safe_float(val_metrics.get("macro_recall")),
+            "f1_score": safe_float(val_metrics.get("macro_f1")),
+        },
+        "test": {
+            "accuracy": safe_float(test_metrics.get("accuracy")),
+            "precision": safe_float(test_metrics.get("macro_precision")),
+            "recall": safe_float(test_metrics.get("macro_recall")),
+            "f1_score": safe_float(test_metrics.get("macro_f1")),
+        },
+    }
+
+
+def build_gat_incidents(sample_name: str, repair_order: list[dict[str, Any]], nodes: list[dict[str, Any]], interpretation: str) -> list[dict[str, str]]:
+    top_node = repair_order[0] if repair_order else None
+    attacker = next((item for item in nodes if item.get("nodeRole") == "suspected_attacker"), None)
+    victim = next((item for item in nodes if item.get("nodeRole") == "suspected_victim"), None)
+    incidents: list[dict[str, str]] = []
+    if top_node:
+        incidents.append(
+            {
+                "title": "核心修复节点已确定",
+                "detail": f"{sample_name} 当前首位修复节点为 {top_node.get('nodeId', '--')}，对应角色 {top_node.get('nodeRole', '--')}。",
+            }
+        )
+    if attacker or victim:
+        parts: list[str] = []
+        if attacker:
+            parts.append(f"{attacker.get('nodeId', '--')} 被识别为攻击源")
+        if victim:
+            parts.append(f"{victim.get('nodeId', '--')} 被识别为受害节点")
+        incidents.append({"title": "异常角色识别", "detail": "；".join(parts) + "。"})
+    incidents.append({"title": "修复解释边界", "detail": interpretation})
+    return incidents
+
+
+def build_dynamic_defense_sample() -> dict[str, Any]:
+    pinned_sample = build_pinned_gat_experiment_sample()
+    if pinned_sample:
+        return pinned_sample
+    resolved = locate_best_gat_result()
+    if not resolved:
+        raise FileNotFoundError("No usable network_intrusion_detection_GAT result found.")
+    return build_dynamic_defense_sample_from_result(*resolved)
+
+
+def build_dynamic_defense_sample_from_result(result_dir: Path, manifest: dict[str, Any], best_entry: dict[str, Any]) -> dict[str, Any]:
+    summary_path_raw = best_entry.get("input_node_summary_csv") or best_entry.get("node_summary_csv")
+    repair_csv_path_raw = best_entry.get("repair_order_csv")
+    summary_path = (GAT_DIR / str(summary_path_raw)).resolve() if summary_path_raw else None
+    repair_csv_path = (GAT_DIR / str(repair_csv_path_raw)).resolve() if repair_csv_path_raw else None
+
+    node_rows = load_gat_node_summary(summary_path) if summary_path else []
+    repair_rows = load_gat_repair_order(repair_csv_path, best_entry.get("repair_order")) if repair_csv_path else list(best_entry.get("repair_order") or [])
+
+    sample_name = Path(str(repair_csv_path_raw or summary_path_raw or result_dir.name)).stem
+    if sample_name.endswith("_repair_order"):
+        sample_name = sample_name[: -len("_repair_order")]
+    if sample_name.endswith("_node_summary"):
+        sample_name = sample_name[: -len("_node_summary")]
+
+    repair_order = [
+        {
+            "repairRank": safe_int(item.get("repair_rank")),
+            "nodeId": str(item.get("node_id") or "--"),
+            "nodeRole": normalize_gat_role(item.get("node_role")),
+            "isCore": boolish(item.get("is_core")),
+            "rolePriority": safe_float(item.get("role_priority")),
+            "damageScore": safe_float(item.get("damage_score")),
+            "structuralScore": safe_float(item.get("structural_score")),
+            "coreScore": safe_float(item.get("core_score")),
+            "repairPriorityScore": safe_float(item.get("repair_priority_score")),
+            "remainingCoreAfterRepair": safe_int(item.get("remaining_core_after_repair")),
+            "topPredictedLabels": str(item.get("top_predicted_labels") or "--"),
+        }
+        for item in repair_rows
+    ]
+
+    nodes = [
+        {
+            "nodeId": str(item.get("node_id") or "--"),
+            "nodeRole": normalize_gat_role(item.get("node_role")),
+            "anomalyRatio": safe_float(item.get("anomaly_ratio")),
+            "avgAnomalyScore": safe_float(item.get("avg_anomaly_score")),
+            "maxAnomalyScore": safe_float(item.get("max_anomaly_score")),
+            "attackerScore": safe_float(item.get("attacker_score")),
+            "victimScore": safe_float(item.get("victim_score")),
+            "compromisedScore": safe_float(item.get("compromised_score")),
+            "totalFlows": safe_int(item.get("total_flows")),
+            "totalAnomalousFlows": safe_int(item.get("total_anomalous_flows")),
+            "topPredictedLabels": str(item.get("top_predicted_labels") or "--"),
+        }
+        for item in node_rows
+    ]
+
+    interpretation = str(
+        best_entry.get("formula_interpretation")
+        or "基于节点级异常摘要生成最小代价修复顺序，当前页面仅展示修复结果与风险画像，不执行真实策略下发。"
+    )
+    sample = {
+        "generatedAt": manifest.get("created_at") or utc_now_iso(),
+        "sampleName": sample_name,
+        "inputPath": str(manifest.get("input_path") or summary_path_raw or result_dir),
+        "modelPath": str(manifest.get("model_path") or ""),
+        "interpretation": interpretation,
+        "route": active_defense_route(),
+        "summary": {
+            "minimumCost": safe_float(best_entry.get("minimum_cost")) or 0.0,
+            "totalNodeCount": safe_int(best_entry.get("total_node_count")) or len(nodes),
+            "anomalousNodeCount": safe_int(best_entry.get("anomalous_node_count")) or 0,
+            "coreNodeCount": safe_int(best_entry.get("core_node_count")) or 0,
+            "repairSteps": len(repair_order),
+            "coreTopRatio": safe_float((manifest.get("args") or {}).get("core_top_ratio") or best_entry.get("core_top_ratio")) or 0.0,
+            "denominator": safe_float(best_entry.get("formula_denominator")) or 0.0,
+        },
+        "repairOrder": repair_order,
+        "nodes": nodes,
+        "incidents": build_gat_incidents(sample_name, repair_order, nodes, interpretation),
+        "_sourceSummaryPath": str(summary_path_raw or ""),
+        "_sourceRepairPath": str(repair_csv_path_raw or ""),
+    }
+    return sample
+
+
+def gat_multi_anomaly_manifests() -> list[tuple[Path, dict[str, Any], dict[str, Any]]]:
+    root = GAT_DIR / "outputs" / "experiments"
+    manifests: list[tuple[Path, dict[str, Any], dict[str, Any]]] = []
+    if not root.exists():
+        return manifests
+    for path in root.rglob("sample_manifest.json"):
+        try:
+            data = load_json_file(path)
+        except (OSError, json.JSONDecodeError):
+            continue
+        if data.get("scenario") != "multi_anomaly":
+            continue
+        if safe_int(data.get("total_nodes")) is None or safe_int(data.get("total_nodes")) > 13:
+            continue
+        repair_path = path.parent / "cicids2017_multi_anomaly_repair_report.json"
+        if not file_exists(repair_path):
+            continue
+        try:
+            repair_report = load_json_file(repair_path)
+        except (OSError, json.JSONDecodeError):
+            continue
+        manifests.append((path.parent, data, repair_report))
+    manifests.sort(key=lambda item: (item[1].get("generation_seed") or 0, str(item[0])))
+    return manifests
+
+
+def gat_scene_label(result_dir: Path, manifest: dict[str, Any], node_count: int) -> tuple[str, str]:
+    parents = result_dir.parents
+    experiment_name = parents[2].name if len(parents) > 2 else result_dir.parent.name
+    run_name = parents[1].name if len(parents) > 1 else result_dir.name
+    seed = manifest.get("generation_seed") or "seed"
+    scene_id = f"{experiment_name}_{run_name}_{seed}"
+    scene_label = f"{experiment_name} · {run_name} · {node_count}节点"
+    return scene_id, scene_label
+
+
+def build_rotating_gat_dynamic_sample() -> dict[str, Any]:
+    global GAT_SCENARIO_CYCLE
+    with GAT_SCENARIO_LOCK:
+        if GAT_SCENARIO_CYCLE is None:
+            scenarios = gat_multi_anomaly_manifests()
+            if not scenarios:
+                return build_dynamic_defense_sample()
+            GAT_SCENARIO_CYCLE = cycle(scenarios)
+        result_dir, manifest, repair_report = next(GAT_SCENARIO_CYCLE)
+    summary_path = result_dir / "cicids2017_multi_anomaly_summary.csv"
+    repair_order_path = result_dir / "cicids2017_multi_anomaly_repair_order.csv"
+    ground_truth_path = result_dir / "cicids2017_multi_anomaly_ground_truth.csv"
+    sample_csv_path = result_dir / "cicids2017_multi_anomaly_sample.csv"
+    manifest_node_ids = [str(item.get("node_id") or "--") for item in (manifest.get("nodes") or [])]
+    node_rows = load_gat_node_summary(summary_path)
+    repair_rows = load_gat_repair_order(repair_order_path, repair_report.get("repair_order"))
+    displayed_nodes = build_gat_display_nodes(node_rows, manifest_node_ids)[:13]
+    scene_id, scene_label = gat_scene_label(result_dir, manifest, len(displayed_nodes))
+    sample = {
+        "generatedAt": manifest.get("created_at") or utc_now_iso(),
+        "sampleName": scene_id,
+        "sceneLabel": scene_label,
+        "inputPath": str(sample_csv_path),
+        "modelPath": str(manifest.get("dataset_dir") or ""),
+        "interpretation": repair_report.get("formula_interpretation")
+        or "基于多异常节点样本生成修复顺序，页面展示节点数量不超过 13 的测试场景。",
+        "route": active_defense_route(),
+        "summary": {
+            "minimumCost": safe_float(repair_report.get("minimum_cost")) or 0.0,
+            "totalNodeCount": len(displayed_nodes),
+            "anomalousNodeCount": safe_int(repair_report.get("anomalous_node_count")) or 0,
+            "coreNodeCount": safe_int(repair_report.get("core_node_count")) or 0,
+            "repairSteps": len(repair_rows),
+            "coreTopRatio": safe_float(repair_report.get("core_top_ratio")) or 0.0,
+            "denominator": safe_float(repair_report.get("formula_denominator")) or 0.0,
+        },
+        "repairOrder": [
+            {
+                "repairRank": safe_int(item.get("repair_rank")),
+                "nodeId": str(item.get("node_id") or "--"),
+                "nodeRole": normalize_gat_role(item.get("node_role")),
+                "isCore": boolish(item.get("is_core")),
+                "rolePriority": safe_float(item.get("role_priority")),
+                "damageScore": safe_float(item.get("damage_score")),
+                "structuralScore": safe_float(item.get("structural_score")),
+                "coreScore": safe_float(item.get("core_score")),
+                "repairPriorityScore": safe_float(item.get("repair_priority_score")),
+                "remainingCoreAfterRepair": safe_int(item.get("remaining_core_after_repair")),
+                "topPredictedLabels": str(item.get("top_predicted_labels") or "--"),
+            }
+            for item in repair_rows
+        ],
+        "nodes": [
+            {
+                "nodeId": str(item.get("node_id") or "--"),
+                "nodeRole": normalize_gat_role(item.get("node_role")),
+                "anomalyRatio": safe_float(item.get("anomaly_ratio")),
+                "avgAnomalyScore": safe_float(item.get("avg_anomaly_score")),
+                "maxAnomalyScore": safe_float(item.get("max_anomaly_score")),
+                "attackerScore": safe_float(item.get("attacker_score")),
+                "victimScore": safe_float(item.get("victim_score")),
+                "compromisedScore": safe_float(item.get("compromised_score")),
+                "totalFlows": safe_int(item.get("total_flows")),
+                "totalAnomalousFlows": safe_int(item.get("total_anomalous_flows")),
+                "roleEvidenceSupport": safe_float(item.get("role_evidence_support")),
+                "topPredictedLabels": str(item.get("top_predicted_labels") or "--"),
+            }
+            for item in displayed_nodes
+        ],
+        "incidents": [
+            {
+                "title": "多异常场景轮换",
+                "detail": f"当前使用 {scene_label} 场景，展示节点数 {len(displayed_nodes)}。",
+            },
+            {
+                "title": "修复结果摘要",
+                "detail": f"最小代价 {safe_float(repair_report.get('minimum_cost')) or 0.0}，异常节点 {repair_report.get('anomalous_node_count') or 0} 个。",
+            },
+            {
+                "title": "解释边界",
+                "detail": repair_report.get("formula_interpretation")
+                or "当前页面仅展示样本驱动的修复结果，不执行真实策略下发。",
+            },
+        ],
+        "_sourceSummaryPath": str(summary_path.relative_to(GAT_DIR)) if summary_path.exists() else "",
+        "_sourceRepairPath": str(repair_order_path.relative_to(GAT_DIR)) if repair_order_path.exists() else "",
+        "_sourceGroundTruthPath": str(ground_truth_path.relative_to(GAT_DIR)) if ground_truth_path.exists() else "",
+    }
+    return sample
+
+
+def build_dynamic_defense_section() -> dict[str, Any]:
+    sample = build_dynamic_defense_sample()
+    model_metrics = build_gat_model_metrics()
+    return {
+        "key": "dynamic_defense",
+        "title": "最小代价修复组件",
+        "summary": "基于 network_intrusion_detection_GAT 的节点级异常摘要与修复规划结果，展示最小代价修复顺序和节点风险画像。",
+        "dataset": {
+            "rows": safe_int(sample.get("totalFlows")) or sum(int(item.get("totalFlows") or 0) for item in sample["nodes"]),
+            "label_count": len(sample["nodes"]),
+        },
+        "overall": {
+            "status": "ready",
+            "models_ready": 1,
+            "models_attached": 1,
+            "model_total": 1,
+        },
+        "models": [
+            {
+                "key": "repair_plan",
+                "title": "Minimum-cost Repair",
+                "subtitle": "节点级最小代价修复排序",
+                "message": sample["interpretation"],
+                "status": "ready",
+                "accuracy": model_metrics.get("test", {}).get("accuracy"),
+                "precision": model_metrics.get("test", {}).get("precision"),
+                "recall": model_metrics.get("test", {}).get("recall"),
+                "f1_score": model_metrics.get("test", {}).get("f1_score"),
+                "model_path": model_metrics.get("modelPath"),
+            }
+        ],
+        "modelMetrics": model_metrics,
+        "sample": sample,
+    }
 
 
 def waiting_model_detail(spec: ModalitySpec, dataset_meta: dict[str, Any]) -> dict[str, Any]:
@@ -978,11 +1589,6 @@ def evaluate_multi3_detail(spec: ModalitySpec, dataset_path: Path) -> dict[str, 
     model_path = MUTI3_DIR / spec.model_path
     dataset_path = dataset_path.resolve()
     cache_key = cache_key_for(f"muti3_{spec.key}_detail", [model_path, dataset_path])
-    legacy_cached = read_legacy_multi3_detail(spec, dataset_path)
-    if legacy_cached:
-        return legacy_cached
-    if should_use_legacy_multi3_cache(dataset_path):
-        return waiting_model_detail(spec, missing_dataset_summary(dataset_path))
 
     def build() -> dict[str, Any]:
         started = time.time()
@@ -1080,19 +1686,12 @@ def build_multi3_section(dataset_path: Path, allow_partial: bool = False) -> dic
     cached_details: list[dict[str, Any]] = []
     if allow_partial and is_default_dataset(dataset_path):
         for spec in MODALITY_SPECS:
-            cached = evaluate_multi3_detail(spec, dataset_path) if should_use_legacy_multi3_cache(dataset_path) else None
-            if not cached:
-                model_path = MUTI3_DIR / spec.model_path
-                cache_key = cache_key_for(f"muti3_{spec.key}_detail", [model_path, dataset_path])
-                cached = read_cached_detail(cache_key)
+            model_path = MUTI3_DIR / spec.model_path
+            cache_key = cache_key_for(f"muti3_{spec.key}_detail", [model_path, dataset_path])
+            cached = read_cached_detail(cache_key)
             if cached:
                 cached_details.append(cached)
-        if cached_details:
-            dataset_meta = cached_details[0]["dataset"]
-        elif file_exists(dataset_path):
-            dataset_meta = dataset_summary(dataset_path)
-        else:
-            dataset_meta = missing_dataset_summary(dataset_path)
+        dataset_meta = cached_details[0]["dataset"] if cached_details else dataset_summary(dataset_path)
         cached_by_key = {detail["key"]: detail for detail in cached_details}
         for spec in MODALITY_SPECS:
             details.append(cached_by_key.get(spec.key) or waiting_model_detail(spec, dataset_meta))
@@ -1109,12 +1708,7 @@ def build_multi3_section(dataset_path: Path, allow_partial: bool = False) -> dic
     else:
         status = "waiting"
         runtime_message = f"muti3 缓存预热中，已就绪 {ready}/{len(details)} 个模型。"
-    if any(detail.get("dataset") for detail in details):
-        dataset_meta = next(detail["dataset"] for detail in details if detail.get("dataset"))
-    elif file_exists(dataset_path):
-        dataset_meta = dataset_summary(dataset_path)
-    else:
-        dataset_meta = missing_dataset_summary(dataset_path)
+    dataset_meta = next((detail["dataset"] for detail in details if detail.get("dataset")), dataset_summary(dataset_path))
     return {
         "key": "muti3",
         "title": "攻击数据特征检测异构组件（muti3）",
@@ -1162,13 +1756,22 @@ def build_integration_payload(dataset_path: Path, allow_partial: bool = False) -
 
 def build_dashboard_payload(dataset_path: Path, allow_partial: bool = False) -> dict[str, Any]:
     dataset_path = dataset_path.resolve()
-    cache_key = cache_key_for("dashboard_payload", [dataset_path])
+    dynamic_sample = build_dynamic_defense_sample()
+    cache_key = cache_key_for(
+        "dashboard_payload",
+        [
+            dataset_path,
+            GAT_DIR / str(dynamic_sample.get("_sourceSummaryPath") or dynamic_sample["inputPath"]),
+            GAT_DIR / str(dynamic_sample.get("_sourceRepairPath") or dynamic_sample["inputPath"]),
+        ],
+    )
 
     def build() -> dict[str, Any]:
         integration = build_integration_payload(dataset_path, allow_partial=allow_partial)
         detection = next(section for section in integration["sections"] if section["key"] == "muti3")
+        dynamic_defense = build_dynamic_defense_section()
         labels = detection["dataset"].get("top_labels", [])
-        active_route = ["host1", "m1", "m3", "m4", "m7", "server1"]
+        active_route = dynamic_defense.get("sample", {}).get("route") or active_defense_route()
         headline = "所有模型均已接入实时运行链路，点击检测页中的模型卡片可进入详情页查看实时检测内容和状态。"
         if integration["overall"]["status"] == "waiting":
             headline = f"validata.csv 缓存预热中，当前已就绪 {integration['overall']['models_ready']}/{integration['overall']['model_total']} 个模型，页面先展示已完成数据。"
@@ -1207,12 +1810,13 @@ def build_dashboard_payload(dataset_path: Path, allow_partial: bool = False) -> 
                 {
                     "key": "dynamic_defense",
                     "title": "动态防御",
-                    "status": "placeholder",
+                    "status": dynamic_defense["overall"]["status"],
                     "accent": "lime",
-                    "summary": "最小代价修复、弹性路由和动态防御机制，当前仅保留承载位。",
+                    "summary": "最小代价修复结果已接入 network_intrusion_detection_GAT 输出，可查看修复顺序、关键指标与节点风险画像。",
                 },
             ],
             "detection": detection,
+            "dynamic_defense": dynamic_defense,
             "integration": integration,
             "incidents": [
                 {
@@ -1273,16 +1877,25 @@ def get_section_detail(section: str, dataset_path: Path) -> dict[str, Any]:
         title = "攻击数据特征检测异构组件（muti3）"
         summary = "多模态攻击数据特征检测实时监控。"
         model_pool = build_multi3_model_pool(models)
+    elif section == "dynamic_defense":
+        defense_section = build_dynamic_defense_section()
+        return {
+            "generated_at": utc_now_iso(),
+            "section": "dynamic_defense",
+            "key": "dynamic_defense",
+            "title": defense_section["title"],
+            "summary": defense_section["summary"],
+            "dataset": defense_section["dataset"],
+            "overall": defense_section["overall"],
+            "models": defense_section["models"],
+            "modelMetrics": defense_section.get("modelMetrics"),
+            "sample": defense_section["sample"],
+        }
     else:
         raise KeyError(f"unknown section detail: {section}")
 
     ready = sum(1 for model in models if model["status"] == "ready")
-    if models:
-        dataset_meta = models[0]["dataset"]
-    elif file_exists(dataset_path):
-        dataset_meta = dataset_summary(dataset_path)
-    else:
-        dataset_meta = missing_dataset_summary(dataset_path)
+    dataset_meta = models[0]["dataset"] if models else dataset_summary(dataset_path)
     return {
         "generated_at": utc_now_iso(),
         "section": section,

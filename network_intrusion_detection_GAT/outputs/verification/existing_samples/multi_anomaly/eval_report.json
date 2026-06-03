@@ -1,0 +1,108 @@
+{
+  "summary_path": "outputs\\verification\\existing_samples\\multi_anomaly\\summary.csv",
+  "ground_truth_path": "outputs\\experiments\\one_shot_20260512_163107\\run_01_seed_2026051201\\samples\\multi_anomaly\\cicids2017_multi_anomaly_ground_truth.csv",
+  "nodes_evaluated": 10,
+  "overall_accuracy": 1.0,
+  "role_accuracy": [
+    {
+      "ground_truth_role": "suspected_attacker",
+      "accuracy": 1.0
+    },
+    {
+      "ground_truth_role": "suspected_compromised_host",
+      "accuracy": 1.0
+    },
+    {
+      "ground_truth_role": "suspected_victim",
+      "accuracy": 1.0
+    },
+    {
+      "ground_truth_role": "uncertain",
+      "accuracy": 1.0
+    }
+  ],
+  "confusion": [
+    {
+      "ground_truth_role": "suspected_attacker",
+      "predicted_role": "suspected_attacker",
+      "count": 2
+    },
+    {
+      "ground_truth_role": "suspected_compromised_host",
+      "predicted_role": "suspected_compromised_host",
+      "count": 2
+    },
+    {
+      "ground_truth_role": "suspected_victim",
+      "predicted_role": "suspected_victim",
+      "count": 2
+    },
+    {
+      "ground_truth_role": "uncertain",
+      "predicted_role": "uncertain",
+      "count": 4
+    }
+  ],
+  "details": [
+    {
+      "node_id": "172.16.10.10",
+      "ground_truth_role": "suspected_attacker",
+      "predicted_role": "suspected_attacker",
+      "correct": true
+    },
+    {
+      "node_id": "172.16.10.11",
+      "ground_truth_role": "suspected_attacker",
+      "predicted_role": "suspected_attacker",
+      "correct": true
+    },
+    {
+      "node_id": "172.16.20.20",
+      "ground_truth_role": "suspected_victim",
+      "predicted_role": "suspected_victim",
+      "correct": true
+    },
+    {
+      "node_id": "172.16.20.21",
+      "ground_truth_role": "suspected_victim",
+      "predicted_role": "suspected_victim",
+      "correct": true
+    },
+    {
+      "node_id": "172.16.30.30",
+      "ground_truth_role": "suspected_compromised_host",
+      "predicted_role": "suspected_compromised_host",
+      "correct": true
+    },
+    {
+      "node_id": "172.16.30.31",
+      "ground_truth_role": "suspected_compromised_host",
+      "predicted_role": "suspected_compromised_host",
+      "correct": true
+    },
+    {
+      "node_id": "172.16.40.40",
+      "ground_truth_role": "uncertain",
+      "predicted_role": "uncertain",
+      "correct": true
+    },
+    {
+      "node_id": "172.16.40.41",
+      "ground_truth_role": "uncertain",
+      "predicted_role": "uncertain",
+      "correct": true
+    },
+    {
+      "node_id": "172.16.40.42",
+      "ground_truth_role": "uncertain",
+      "predicted_role": "uncertain",
+      "correct": true
+    },
+    {
+      "node_id": "172.16.40.43",
+      "ground_truth_role": "uncertain",
+      "predicted_role": "uncertain",
+      "correct": true
+    }
+  ]
+}

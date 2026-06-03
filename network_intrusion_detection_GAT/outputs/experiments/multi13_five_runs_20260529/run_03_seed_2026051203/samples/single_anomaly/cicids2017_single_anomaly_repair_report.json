@@ -1,0 +1,24 @@
+{
+  "total_node_count": 14,
+  "anomalous_node_count": 1,
+  "core_node_count": 1,
+  "minimum_cost": 0.005480200987505196,
+  "repair_order": [
+    {
+      "repair_rank": 1,
+      "node_id": "172.16.50.50",
+      "node_role": "suspected_compromised_host",
+      "is_core": true,
+      "role_priority": 1.0,
+      "damage_score": 0.827488000877674,
+      "structural_score": 1.0,
+      "core_score": 0.8964928005266044,
+      "repair_priority_score": 0.9309952003510698,
+      "factorial_rank": 1,
+      "rank_contribution": 0.9309952003510698,
+      "cumulative_contribution": 0.9309952003510698,
+      "remaining_core_after_repair": 0,
+      "top_predicted_labels": "Bot:43; Infiltration:39; FTP-Patator:18"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+# Core data processing
+numpy>=1.24
+pandas>=2.0
+
+# Model training and inference
+# Keep torch and torch-geometric on compatible builds for your Python/CUDA setup.
+torch>=2.2
+torch-geometric>=2.5
+
+# PCAP/PCAPNG flow extraction
+cicflowmeter>=0.4.0
+scapy>=2.5

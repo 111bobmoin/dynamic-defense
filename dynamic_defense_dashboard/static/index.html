@@ -220,25 +220,24 @@
         </section>
 
         <section class="dashboard-tab-content" data-dashboard-panel="defense" role="tabpanel" hidden>
-          <div class="module-page-grid dashboard-module-shell">
-            <section class="panel module-intro-panel">
-              <div class="stage-header">
-                <div>
-                  <p class="stage-kicker">DYNAMIC DEFENSE</p>
-                  <h2>最小代价修复、弹性路由与动态防御机制</h2>
-                  <p class="stage-subtitle">当前模块承载动态防御能力入口，用于后续接入修复策略、执行链路与弹性路由决策能力。</p>
+          <div class="defense-layout-grid dashboard-module-shell">
+            <div class="defense-left-column">
+              <section class="panel threat-hero-panel defense-hero-panel">
+                <div class="stage-header threat-hero-header">
+                  <div>
+                    <p class="stage-kicker">MINNUM COST REPAIR</p>
+                    <h2>最小代价修复</h2>
+                    <p class="stage-subtitle" id="dashboardDefenseEntryCopy">基于GAT的网络异常节点检测，并依据修复代价大小做出修复循序判断</p>
+                  </div>
+                  <div class="mode-pills defense-mode-pills">
+                    <span>Repair Plan</span>
+                    <span>Core Node</span>
+                    <span>Risk View</span>
+                  </div>
                 </div>
-                <div class="mode-pills">
-                  <span>Repair</span>
-                  <span>Elastic Routing</span>
-                  <span>Defense</span>
-                </div>
-              </div>
-              <div class="placeholder-copy">
-                <strong>待接入内容</strong>
-                <p>最小代价修复策略、弹性路由决策链、动态防御执行结果、策略切换可视化。</p>
-              </div>
-            </section>
+                <div id="dashboardDefenseEntryCard" class="defense-entry-card-shell"></div>
+              </section>
+            </div>
 
             <section class="panel stage-panel">
               <div class="topology-stage dashboard-stage compact-stage" data-scene="defense">
@@ -246,6 +245,25 @@
               </div>
             </section>
           </div>
+
+          <section class="panel module-intro-panel defense-future-panel">
+            <div class="stage-header">
+              <div>
+                <p class="stage-kicker">NEXT STEP</p>
+                <h2>后续扩展方向</h2>
+                <p class="stage-subtitle">当前已经展示最小代价修复结果。后续还可以继续接入真实修复执行、弹性路由联动和动态防御策略闭环。</p>
+              </div>
+              <div class="mode-pills">
+                <span>Elastic Routing</span>
+                <span>Defense Action</span>
+                <span>Policy Loop</span>
+              </div>
+            </div>
+            <div class="placeholder-copy defense-future-copy">
+              <strong>待扩展内容</strong>
+              <p>弹性路由决策链、动态防御执行结果、策略切换可视化，以及修复顺序到拓扑节点和链路动作的真实映射。</p>
+            </div>
+          </section>
         </section>
       </main>
     </div>

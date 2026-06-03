@@ -3,6 +3,7 @@
 *.pyc
 *.pyo
 *.pyd
+**/.idea/
 
 # Oversized local data and binary artifacts that exceed GitHub limits
 graph/BGL.log
@@ -12,3 +13,21 @@ log/rawTFVector.txt
 log/TEST_main/DLSTM.zip
 log/TEST_main/GRU.zip
 muti3/Dataset/validata.csv
+
+# Generated caches and local previews
+dynamic_defense_dashboard/.runtime_cache/
+dynamic_defense_dashboard/dom_dump.html
+tmp_*.png
+
+# Trained models and derived graph artifacts
+graph/gcn_model.pth
+graph/processed_bgl/*.npz
+graph/processed_bgl/*.npy
+graph/processed_bgl/*.pt
+graph/processed_bgl/*.gpickle
+log/TEST_main/DLSTM/*_lstm_model/
+log/TEST_main/DLSTM/lstm_model.pth
+log/TEST_main/GRU/models_pth/
+log/TEST_main/Kmeans/all_kms_model/
+log/TEST_main/Kmeans/models/*.pth
+muti3/models/*.pth

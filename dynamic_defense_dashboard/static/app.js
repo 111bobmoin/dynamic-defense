@@ -1,22 +1,29 @@
-const DEFAULT_DATASET = "muti3/Dataset/validata.csv";
+const DEFAULT_DATASET = "muti3/Dataset/validata_sample.csv";
 const DEFAULT_ROUTE = ["host1", "m1", "m3", "m4", "m7", "server1"];
+const DEFENSE_TOPOLOGY_NODE_ORDER = ["host1", "m1", "m2", "m3", "m4", "m5", "m6", "m7", "m8", "m9", "server1", "server2", "controller"];
+const DEFENSE_SPECIAL_NODE_ORDERS = {
+  run_03_seed_2026051203: ["m4", "m3", "host1", "m1", "m2", "m5", "m6", "m7", "m8", "m9", "server1", "server2", "controller"],
+};
 const state = {
   dataset: DEFAULT_DATASET,
   monitorTimer: null,
   liveTimer: null,
   liveFrame: 0,
   dashboardLiveBase: null,
+  defenseRotationTimer: null,
 };
 
 const MONITOR_WINDOW = 14;
 const MONITOR_TICK_MS = 1200;
 const LIVE_TICK_MS = 1400;
+const DEFENSE_ROTATION_TICK_MS = 12000;
 
-const COMPONENT_DISPLAY_ORDER = ["muti3", "log", "graph"];
+const COMPONENT_DISPLAY_ORDER = ["muti3", "log", "graph", "dynamic_defense"];
 const COMPONENT_TITLE_MAP = {
   muti3: "攻击数据特征检测异构组件",
   log: "攻击逻辑检测异构组件",
   graph: "行为图结构检测异构组件",
+  dynamic_defense: "最小代价修复组件",
 };
 
 const COMPONENT_MODEL_META_MAP = {
@@ -59,6 +66,9 @@ function componentSectionSummary(section, options = {}) {
   if (section?.key === "muti3" && options.modelNames) {
     return "LSTM / Subspace Clustering / Autoregressive 三模型实时联动运行。";
   }
+  if (section?.key === "dynamic_defense") {
+    return "最小代价修复结果摘要已就绪，支持查看修复顺序、节点风险画像与解释边界。";
+  }
   return section?.summary || "--";
 }
 
@@ -74,13 +84,80 @@ const SYSTEM_SUMMARY_OVERRIDES = {
   ],
 };
 
+const DEFENSE_MODEL_METRICS = {
+  title: "GAT Node Anomaly Detector",
+  subtitle: "network_intrusion_detection_GAT / CICIDS2017",
+  status: "ready",
+  modelPath: "network_intrusion_detection_GAT/outputs/training/20260511_182846/model.pt",
+  bestEpoch: 14,
+  featureCount: 68,
+  validation: {
+    accuracy: 0.9603328010757206,
+    precision: 0.7969753241286958,
+    recall: 0.8584521049255053,
+    f1_score: 0.8144686434642843,
+  },
+  test: {
+    accuracy: 0.9638594721801984,
+    precision: 0.8022144381993688,
+    recall: 0.8666844485712677,
+    f1_score: 0.8134502315523816,
+  },
+};
+
+function defenseComponentSection(sample = DEFENSE_SAMPLE) {
+  return {
+    key: "dynamic_defense",
+    title: "最小代价修复组件",
+    summary: "基于 network_intrusion_detection_GAT 的多异常节点样本轮换展示，支持查看修复顺序、节点风险画像和解释边界。",
+    dataset: {
+      rows: sample.nodes?.reduce((sum, item) => sum + Number(item.totalFlows || 0), 0) || 0,
+    },
+    overall: {
+      status: "ready",
+      models_ready: 1,
+      model_total: 1,
+    },
+    modelMetrics: DEFENSE_MODEL_METRICS,
+    models: [
+      {
+        key: "repair_plan",
+        title: "Minimum-cost Repair",
+        subtitle: "节点级最小代价修复排序",
+        message: sample.interpretation,
+        status: "ready",
+        accuracy: DEFENSE_MODEL_METRICS.test.accuracy,
+        precision: DEFENSE_MODEL_METRICS.test.precision,
+        recall: DEFENSE_MODEL_METRICS.test.recall,
+        f1_score: DEFENSE_MODEL_METRICS.test.f1_score,
+        model_path: DEFENSE_MODEL_METRICS.modelPath,
+      },
+    ],
+    sample,
+  };
+}
+
+function resolveDefenseSection(source = null) {
+  if (source?.sample) {
+    return source;
+  }
+  return defenseComponentSection(source || DEFENSE_SAMPLE);
+}
+
+function detailBackHref(sectionKey) {
+  if (sectionKey === "dynamic_defense") {
+    return "/?tab=defense";
+  }
+  return "/?tab=unknown-threat";
+}
+
 const byId = (id) => document.getElementById(id);
 const page = document.body.dataset.page;
 
 const moduleRouteMap = {
   multi_detection: "/unknown-threat.html",
   antibody_generalization: "/antibody.html",
-  dynamic_defense: "/defense.html",
+  dynamic_defense: "/?tab=defense",
 };
 
 const dashboardModuleTabMap = {
@@ -170,6 +247,98 @@ const sceneVariants = {
     ],
     plain: false,
   },
+};
+
+const DEFENSE_SAMPLE = {
+  generatedAt: "2026-05-20T19:24:44",
+  sampleName: "one_shot_20260512_163107_run_01_seed_2026051201_372137472",
+  sceneLabel: "one_shot_20260512_163107 · run_01_seed_2026051201 · 10节点",
+  inputPath: "network_intrusion_detection_GAT/outputs/experiments/one_shot_20260512_163107/run_01_seed_2026051201/samples/multi_anomaly/cicids2017_multi_anomaly_sample.csv",
+  modelPath: "network_intrusion_detection_GAT/cicids2017_dataset",
+  interpretation:
+    "基于多异常节点测试样本生成最小代价修复顺序，页面轮换展示不超过 13 个节点的场景结果，不执行真实策略下发。",
+  route: ["172.16.30.30", "203.119.144.80", "172.16.20.21", "172.16.30.31"],
+  summary: {
+    minimumCost: 0.0086,
+    totalNodeCount: 10,
+    anomalousNodeCount: 6,
+    coreNodeCount: 2,
+    repairSteps: 6,
+    coreTopRatio: 0.3,
+    denominator: 0,
+  },
+  repairOrder: [
+    {
+      repairRank: 1,
+      nodeId: "172.16.30.30",
+      nodeRole: "suspected_compromised_host",
+      isCore: true,
+      rolePriority: 1.0,
+      damageScore: 0.9140,
+      structuralScore: 0.8001,
+      coreScore: 0.8684,
+      repairPriorityScore: 0.9156,
+      remainingCoreAfterRepair: 1,
+      topPredictedLabels: "Bot:35; Infiltration:30; DDoS:22",
+    },
+    {
+      repairRank: 2,
+      nodeId: "172.16.30.31",
+      nodeRole: "suspected_compromised_host",
+      isCore: true,
+      rolePriority: 1.0,
+      damageScore: 0.8174,
+      structuralScore: 0.5621,
+      coreScore: 0.7152,
+      repairPriorityScore: 0.8175,
+      remainingCoreAfterRepair: 0,
+      topPredictedLabels: "DDoS:20; SSH-Patator:19; PortScan:16",
+    },
+  ],
+  nodes: [
+    {
+      nodeId: "172.16.30.30",
+      nodeRole: "suspected_compromised_host",
+      anomalyRatio: 0.9242,
+      avgAnomalyScore: 0.9168,
+      maxAnomalyScore: 1.0,
+      attackerScore: 0.8967,
+      victimScore: 0.8700,
+      compromisedScore: 0.9348,
+      totalFlows: 132,
+      totalAnomalousFlows: 122,
+      roleEvidenceSupport: 1.0,
+      topPredictedLabels: "Bot:35; Infiltration:30; DDoS:22",
+    },
+    {
+      nodeId: "203.119.144.80",
+      nodeRole: "uncertain",
+      anomalyRatio: 0.9259,
+      avgAnomalyScore: 0.9178,
+      maxAnomalyScore: 1.0,
+      attackerScore: 0.7498,
+      victimScore: 0.7383,
+      compromisedScore: 0.7971,
+      totalFlows: 27,
+      totalAnomalousFlows: 25,
+      roleEvidenceSupport: 0.45,
+      topPredictedLabels: "DoS Slowhttptest:5; DoS slowloris:4; Bot:4",
+    },
+  ],
+  incidents: [
+    {
+      title: "多异常场景轮换",
+      detail: "当前默认展示 one_shot 试验中的 10 节点多异常样本，详情页会轮换到其他同规模场景。",
+    },
+    {
+      title: "修复结果摘要",
+      detail: "最小代价 0.0086，异常节点 6 个，核心节点 2 个，修复顺序按 repair priority 降序排列。",
+    },
+    {
+      title: "页面解释边界",
+      detail: "当前页仅展示 GAT 样本驱动的修复结果，不做 IP 到拓扑节点映射，也不执行真实弹性路由或防御下发。",
+    },
+  ],
 };
 
 function getQueryDataset() {
@@ -285,6 +454,13 @@ function formatTime(value) {
   return `${date.toLocaleDateString("zh-CN")} ${date.toLocaleTimeString("zh-CN")}`;
 }
 
+function formatDecimal(value, digits = 4) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) {
+    return "--";
+  }
+  return Number(value).toFixed(digits);
+}
+
 function normalizeStatus(status) {
   if (["ready", "online"].includes(status)) {
     return "online";
@@ -357,6 +533,27 @@ function renderIncidents(incidents = [], containerId = "incidentList") {
     fragment.querySelector("h4").textContent = item.title;
     fragment.querySelector("p").textContent = item.detail;
     container.appendChild(fragment);
+  });
+}
+
+function renderRouteChips(containerId, route = [], options = {}) {
+  const container = byId(containerId);
+  if (!container) {
+    return;
+  }
+  container.innerHTML = "";
+  route.forEach((item, index) => {
+    const chip = document.createElement("span");
+    chip.className = "route-chip";
+    chip.textContent = item;
+    container.appendChild(chip);
+    if (options.withArrows && index < route.length - 1) {
+      const separator = document.createElement("span");
+      separator.className = "route-separator";
+      separator.setAttribute("aria-hidden", "true");
+      separator.innerHTML = "&rarr;";
+      container.appendChild(separator);
+    }
   });
 }
 
@@ -639,6 +836,7 @@ function renderDashboard(data) {
 
   renderSystems(data.systems);
   renderDashboardThreatModule(data);
+  renderDashboardDefenseModule(data.dynamic_defense || defenseComponentSection());
   renderTopologyScenes(data.overview.active_path || DEFAULT_ROUTE);
   startLiveTicker(data);
 }
@@ -668,7 +866,10 @@ function bindDashboardTabs() {
       switchDashboardTab(button.dataset.dashboardTab || "overview");
     });
   });
-  switchDashboardTab("overview");
+  const params = new URLSearchParams(window.location.search);
+  const initialTab = params.get("tab");
+  const allowedTabs = new Set(["overview", "unknown-threat", "antibody", "defense"]);
+  switchDashboardTab(allowedTabs.has(initialTab) ? initialTab : "overview");
 }
 
 function renderUnknownThreat(data) {
@@ -681,10 +882,358 @@ function renderUnknownThreat(data) {
   renderTopologyScenes(data.overview.active_path || DEFAULT_ROUTE);
 }
 
+function defenseRoleMeta(role) {
+  const map = {
+    suspected_attacker: { label: "Suspected Attacker", status: "error" },
+    suspected_victim: { label: "Suspected Victim", status: "waiting" },
+    suspected_compromised_host: { label: "Compromised Host", status: "ready" },
+    uncertain: { label: "Uncertain", status: "placeholder" },
+  };
+  return map[role] || { label: role || "--", status: "placeholder" };
+}
+
+function defenseTopologyNodeOrder(sample) {
+  const sampleKey = `${sample?.sampleName || ""} ${sample?.sceneLabel || ""}`;
+  for (const [marker, order] of Object.entries(DEFENSE_SPECIAL_NODE_ORDERS)) {
+    if (sampleKey.includes(marker)) {
+      return order;
+    }
+  }
+  return DEFENSE_TOPOLOGY_NODE_ORDER;
+}
+
+function buildDefenseNodeNameMap(sample) {
+  const nodeMap = new Map();
+  const topologyOrder = defenseTopologyNodeOrder(sample);
+  (sample?.nodes || []).forEach((item, index) => {
+    if (!item?.nodeId) {
+      return;
+    }
+    nodeMap.set(item.nodeId, topologyOrder[index] || item.nodeId);
+  });
+  return nodeMap;
+}
+
+function defenseNodeDisplayName(nodeMap, nodeId, fallbackIndex = null, topologyOrder = DEFENSE_TOPOLOGY_NODE_ORDER) {
+  if (nodeId && nodeMap?.has(nodeId)) {
+    return nodeMap.get(nodeId);
+  }
+  if (fallbackIndex !== null && fallbackIndex !== undefined) {
+    return topologyOrder[fallbackIndex] || nodeId || "--";
+  }
+  return nodeId || "--";
+}
+
+function buildDefenseNodeListText(nodeIds = [], nodeMap = null) {
+  const names = [];
+  const seen = new Set();
+  nodeIds.forEach((nodeId) => {
+    const name = defenseNodeDisplayName(nodeMap, nodeId);
+    if (!name || name === "--" || seen.has(name)) {
+      return;
+    }
+    seen.add(name);
+    names.push(name);
+  });
+  return names.join("、") || "--";
+}
+
+function buildDefenseAnomalousNodeText(sample, nodeMap) {
+  return buildDefenseNodeListText((sample?.repairOrder || []).map((item) => item.nodeId), nodeMap);
+}
+
+function buildDefenseCoreNodeText(sample, nodeMap) {
+  return buildDefenseNodeListText(
+    (sample?.repairOrder || []).filter((item) => item.isCore).map((item) => item.nodeId),
+    nodeMap,
+  );
+}
+
+function buildDefenseRepairSequenceText(sample, nodeMap) {
+  const names = (sample?.repairOrder || []).map((item) => defenseNodeDisplayName(nodeMap, item.nodeId));
+  return names.join(" -> ") || "--";
+}
+
+function buildDefenseDetailOverview(sample, nodeMap) {
+  const sceneLabel = sample?.sceneLabel || sample?.sampleName || "当前样本";
+  const totalNodeCount = formatInteger(sample?.summary?.totalNodeCount);
+  const anomalousNodeCount = formatInteger(sample?.summary?.anomalousNodeCount);
+  const minimumCost = formatDecimal(sample?.summary?.minimumCost);
+  const topNodeName = defenseNodeDisplayName(nodeMap, sample?.repairOrder?.[0]?.nodeId);
+  return `${sceneLabel} 共关联 ${totalNodeCount} 个拓扑节点，识别出 ${anomalousNodeCount} 个异常节点，最小修复代价 ${minimumCost}，首要修复节点为 ${topNodeName}。`;
+}
+
+function buildDefenseDatasetFactsMarkup(sample) {
+  return [
+    `<div>关联链路：<strong>${DEFAULT_ROUTE.join("->")}</strong></div>`,
+    `<div>节点数：<strong>${formatInteger(sample?.summary?.totalNodeCount)}</strong></div>`,
+    `<div>异常节点数：<strong>${formatInteger(sample?.summary?.anomalousNodeCount)}</strong></div>`,
+    `<div>核心节点数：<strong>${formatInteger(sample?.summary?.coreNodeCount)}</strong></div>`,
+  ].join("");
+  return [
+    `<div>关联链路：<strong>${DEFAULT_ROUTE.join("->")}</strong></div>`,
+    `<div>关联节点数：<strong>${formatInteger(sample?.summary?.totalNodeCount)}</strong></div>`,
+    `<div>异常节点数：<strong>${formatInteger(sample?.summary?.anomalousNodeCount)}</strong></div>`,
+    `<div>核心节点数：<strong>${formatInteger(sample?.summary?.coreNodeCount)}</strong></div>`,
+  ].join("");
+}
+
+function buildDefenseOverviewText(sample, nodeMap) {
+  const totalNodeCount = formatInteger(sample?.summary?.totalNodeCount);
+  const anomalousNodeCount = formatInteger(sample?.summary?.anomalousNodeCount);
+  const minimumCost = formatDecimal(sample?.summary?.minimumCost);
+  const topNodeName = defenseNodeDisplayName(nodeMap, sample?.repairOrder?.[0]?.nodeId);
+  return `共关联 ${totalNodeCount} 个拓扑节点，识别出 ${anomalousNodeCount} 个异常节点，最小修复代价 ${minimumCost}，首要修复节点为 ${topNodeName}。`;
+}
+
+function renderDefenseFacts(sample) {
+  const node = byId("defenseFacts");
+  if (!node) {
+    return;
+  }
+  node.innerHTML = buildDefenseDatasetFactsMarkup(sample);
+  return;
+  node.innerHTML = [
+    `<div>输入文件：<strong>${sample.inputPath}</strong></div>`,
+    `<div>模型路径：<strong>${sample.modelPath}</strong></div>`,
+    `<div>归一化分母：<strong>${formatDecimal(sample.summary.denominator)}</strong></div>`,
+    `<div>核心比例阈值：<strong>${formatPercent(sample.summary.coreTopRatio)}</strong></div>`,
+  ].join("");
+}
+
+function renderDefenseModelCard(modelMetrics = DEFENSE_MODEL_METRICS, containerId) {
+  const node = byId(containerId);
+  if (!node || !modelMetrics) {
+    return;
+  }
+  node.innerHTML = `
+    <article class="component-card defense-model-card">
+      <div class="component-card-header">
+        <div>
+          <h3>网络异常检测GAT</h3>
+          <p>${modelMetrics.subtitle || "--"}</p>
+        </div>
+      </div>
+      <div class="component-stat-grid defense-model-stat-grid">
+        <div class="metric-chip"><span>Test Acc</span><strong>${formatPercent(modelMetrics.test?.accuracy)}</strong></div>
+        <div class="metric-chip"><span>Test F1</span><strong>${formatPercent(modelMetrics.test?.f1_score)}</strong></div>
+        <div class="metric-chip"><span>Precision</span><strong>${formatPercent(modelMetrics.test?.precision)}</strong></div>
+        <div class="metric-chip"><span>Recall</span><strong>${formatPercent(modelMetrics.test?.recall)}</strong></div>
+      </div>
+      <div class="defense-model-note">
+        验证集 Acc ${formatPercent(modelMetrics.validation?.accuracy)} | 验证集 F1 ${formatPercent(modelMetrics.validation?.f1_score)}
+      </div>
+    </article>
+  `;
+}
+
+function buildDefenseModelMetricsMarkup(modelMetrics = DEFENSE_MODEL_METRICS) {
+  if (!modelMetrics) {
+    return "";
+  }
+  return `
+    <section class="defense-inline-model-section">
+      <div class="defense-inline-model-header">
+        <div>
+          <p class="stage-kicker">GAT MODEL</p>
+          <h3>网络异常检测GAT</h3>
+          <p>${modelMetrics.subtitle || "--"}</p>
+        </div>
+      </div>
+      <div class="component-stat-grid defense-model-stat-grid">
+        <div class="metric-chip"><span>Test Acc</span><strong>${formatPercent(modelMetrics.test?.accuracy)}</strong></div>
+        <div class="metric-chip"><span>Test F1</span><strong>${formatPercent(modelMetrics.test?.f1_score)}</strong></div>
+        <div class="metric-chip"><span>Precision</span><strong>${formatPercent(modelMetrics.test?.precision)}</strong></div>
+        <div class="metric-chip"><span>Recall</span><strong>${formatPercent(modelMetrics.test?.recall)}</strong></div>
+      </div>
+      <div class="defense-model-note">
+        验证集 Acc ${formatPercent(modelMetrics.validation?.accuracy)} | 验证集 F1 ${formatPercent(modelMetrics.validation?.f1_score)}
+      </div>
+    </section>
+  `;
+}
+
+function renderDefenseRepairCards(sample, nodeMap = null) {
+  const template = byId("defenseRepairCardTemplate");
+  const container = byId("defenseRepairGrid");
+  if (!template || !container) {
+    return;
+  }
+  container.innerHTML = "";
+  sample.repairOrder.forEach((item) => {
+    const meta = defenseRoleMeta(item.nodeRole);
+    const fragment = template.content.cloneNode(true);
+    fragment.querySelector("h3").textContent = `#${item.repairRank} ${defenseNodeDisplayName(nodeMap, item.nodeId)}`;
+    fragment.querySelector(".defense-repair-role").textContent = meta.label;
+    setStatusPill(fragment.querySelector(".status-pill"), meta.status, item.isCore ? "Core" : "Follow-up");
+
+    const statGrid = fragment.querySelector(".component-stat-grid");
+    [
+      ["Priority", formatDecimal(item.repairPriorityScore)],
+      ["Damage", formatDecimal(item.damageScore)],
+      ["Structural", formatDecimal(item.structuralScore)],
+      ["Role Weight", formatDecimal(item.rolePriority, 2)],
+    ].forEach(([label, value]) => {
+      const box = document.createElement("div");
+      box.className = "metric-chip";
+      box.innerHTML = `<span>${label}</span><strong>${value}</strong>`;
+      statGrid.appendChild(box);
+    });
+
+    const tags = fragment.querySelector(".defense-tag-row");
+    [
+      item.isCore ? "Core Node" : "Non-core",
+      `Remain Core ${item.remainingCoreAfterRepair}`,
+      item.topPredictedLabels,
+    ].forEach((value) => {
+      const chip = document.createElement("span");
+      chip.textContent = value;
+      tags.appendChild(chip);
+    });
+
+    container.appendChild(fragment);
+  });
+}
+
+function renderDefenseNodeCards(sample, nodeMap = null) {
+  const template = byId("defenseNodeCardTemplate");
+  const container = byId("defenseNodeGrid");
+  const topologyOrder = defenseTopologyNodeOrder(sample);
+  if (!template || !container) {
+    return;
+  }
+  container.innerHTML = "";
+  sample.nodes.forEach((item, index) => {
+    const meta = defenseRoleMeta(item.nodeRole);
+    const fragment = template.content.cloneNode(true);
+    fragment.querySelector("h3").textContent = defenseNodeDisplayName(nodeMap, item.nodeId, index, topologyOrder);
+    fragment.querySelector(".defense-node-role").textContent = meta.label;
+    setStatusPill(fragment.querySelector(".status-pill"), meta.status, "Detected");
+
+    const statGrid = fragment.querySelector(".component-stat-grid");
+    [
+      ["Anomaly Ratio", formatPercent(item.anomalyRatio)],
+      ["Avg Score", formatDecimal(item.avgAnomalyScore)],
+      ["Max Score", formatDecimal(item.maxAnomalyScore)],
+      ["Anomalous Flows", formatInteger(item.totalAnomalousFlows)],
+      ["Role Evidence", formatDecimal(item.roleEvidenceSupport)],
+    ].forEach(([label, value]) => {
+      const box = document.createElement("div");
+      box.className = "metric-chip";
+      box.innerHTML = `<span>${label}</span><strong>${value}</strong>`;
+      statGrid.appendChild(box);
+    });
+
+    fragment.querySelector(".defense-node-labels").textContent = item.topPredictedLabels;
+    container.appendChild(fragment);
+  });
+}
+
+function renderDefense(defenseSection = defenseComponentSection()) {
+  const section = resolveDefenseSection(defenseSection);
+  const sample = section.sample || DEFENSE_SAMPLE;
+  const defenseNodeMap = buildDefenseNodeNameMap(sample);
+  const anomalousNodeText = buildDefenseAnomalousNodeText(sample, defenseNodeMap);
+  const generatedAt = byId("defenseGeneratedAt");
+  if (generatedAt) {
+    generatedAt.textContent = formatTime(sample.generatedAt);
+  }
+  const overview = byId("defenseOverviewCopy");
+  if (overview) {
+    overview.textContent = buildDefenseOverviewText(sample, defenseNodeMap);
+  }
+  const badge = byId("defenseSampleBadge");
+  if (badge) {
+    badge.textContent = sample.sceneLabel || sample.sampleName || "Sample";
+    badge.textContent = "轮换场景";
+  }
+  if (badge) {
+    badge.textContent = sample.sceneLabel || sample.sampleName || "Sample";
+  }
+
+  const minCost = byId("defenseMinCost");
+  if (minCost) {
+    minCost.textContent = formatDecimal(sample.summary.minimumCost);
+  }
+  const anomalousNodes = byId("defenseAnomalousNodes");
+  if (anomalousNodes) {
+    anomalousNodes.textContent = anomalousNodeText;
+  }
+  const coreNodes = byId("defenseCoreNodes");
+  if (coreNodes) {
+    coreNodes.textContent = formatInteger(sample.summary.coreNodeCount);
+  }
+  const repairSteps = byId("defenseRepairSteps");
+  if (repairSteps) {
+    repairSteps.textContent = formatInteger(sample.summary.repairSteps);
+  }
+
+  renderDefenseFacts(sample);
+  renderDefenseModelCard(section.modelMetrics || DEFENSE_MODEL_METRICS, "defenseModelCard");
+  renderIncidents(sample.incidents, "defenseIncidentList");
+  renderTopologyScenes(sample.route || DEFAULT_ROUTE);
+
+  const routeChips = byId("defenseRouteChips");
+  if (routeChips) {
+    routeChips.innerHTML = "";
+    (sample.route || []).forEach((item) => {
+      const chip = document.createElement("span");
+      chip.textContent = item;
+      routeChips.appendChild(chip);
+    });
+  }
+
+  renderDefenseRepairCards(sample, defenseNodeMap);
+  renderDefenseNodeCards(sample, defenseNodeMap);
+}
+
+function bindDefenseActions() {
+  byId("defenseRefreshButton")?.addEventListener("click", async () => {
+    const data = await fetchDashboard();
+    renderDefense(data.dynamic_defense || defenseComponentSection());
+  });
+}
+
 function renderDashboardThreatModule(data) {
   renderComponentCards(data.integration?.sections || [], "dashboardThreatComponentGrid");
   renderIncidents(data.incidents, "dashboardThreatIncidentList");
   renderTopologyScenes(data.overview.active_path || DEFAULT_ROUTE);
+}
+
+function renderDashboardDefenseModule(defenseSection = defenseComponentSection()) {
+  const section = resolveDefenseSection(defenseSection);
+  const sample = section.sample || DEFENSE_SAMPLE;
+  const modelMetrics = section.modelMetrics || DEFENSE_MODEL_METRICS;
+  const defenseNodeMap = buildDefenseNodeNameMap(sample);
+  const overview = byId("dashboardDefenseEntryCopy");
+  if (overview) {
+    overview.textContent = "基于GAT的网络异常节点检测，并依据修复代价大小做出修复循序判断";
+  }
+  if (overview) {
+    overview.textContent = buildDefenseOverviewText(sample, defenseNodeMap);
+  }
+  const container = byId("dashboardDefenseEntryCard");
+  if (!container) {
+    return;
+  }
+  const repairSequence = buildDefenseRepairSequenceText(sample, defenseNodeMap);
+  const anomalousNodeText = buildDefenseAnomalousNodeText(sample, defenseNodeMap);
+  container.innerHTML = `
+    <article class="component-card defense-entry-card is-compact">
+      <div class="defense-entry-highlight">
+        <strong>最小代价修复顺序</strong>
+        <span>${repairSequence}</span>
+      </div>
+      <div class="component-stat-grid defense-entry-stat-grid">
+        <div class="metric-chip"><span>最小代价</span><strong>${formatDecimal(sample.summary.minimumCost)}</strong></div>
+        <div class="metric-chip defense-entry-node-chip"><span>异常节点</span><strong>${anomalousNodeText}</strong></div>
+      </div>
+      ${buildDefenseModelMetricsMarkup(modelMetrics)}
+      <div class="component-card-footer">
+        <a class="ghost-button text-link-button component-detail-link" href="${componentDetailHref("dynamic_defense")}">查看详情</a>
+      </div>
+    </article>
+  `;
 }
 
 function switchThreatTab(tabKey, scope = document) {
@@ -911,6 +1460,24 @@ function stopMonitorPlayback() {
   }
 }
 
+function stopDefenseRotation() {
+  if (state.defenseRotationTimer) {
+    window.clearInterval(state.defenseRotationTimer);
+    state.defenseRotationTimer = null;
+  }
+}
+
+function startDefenseRotation(refreshFn) {
+  stopDefenseRotation();
+  state.defenseRotationTimer = window.setInterval(async () => {
+    try {
+      await refreshFn();
+    } catch (error) {
+      console.error(error);
+    }
+  }, DEFENSE_ROTATION_TICK_MS);
+}
+
 function updateMonitorCards(detail) {
   const cards = document.querySelectorAll('.component-monitor-card');
   cards.forEach((card, index) => {
@@ -1035,6 +1602,23 @@ function renderModelPool(detail) {
 
 function renderComponentDetail(detail) {
   const sectionKey = detail.section || detail.key;
+  if (sectionKey === "dynamic_defense") {
+    renderDefenseDetail(detail);
+    return;
+  }
+  document.title = "组件实时监控";
+  const pageTitle = byId("detailPageTitle");
+  if (pageTitle) {
+    pageTitle.textContent = "组件实时监控";
+  }
+  const stageKicker = byId("detailStageKicker");
+  if (stageKicker) {
+    stageKicker.textContent = "COMPONENT MONITORING";
+  }
+  const defenseShell = byId("defenseDetailShell");
+  if (defenseShell) {
+    defenseShell.hidden = true;
+  }
   const generatedAt = byId("generatedAt");
   if (generatedAt) {
     generatedAt.textContent = formatTime(detail.generated_at);
@@ -1051,6 +1635,7 @@ function renderComponentDetail(detail) {
   if (summary) {
     const poolTotal = detail.model_pool?.total || detail.model_pool?.models?.length || 0;
     summary.textContent = `上方展示 ${poolTotal} 个异构模型组成的协同检测池，下方监控卡继续呈现当前在线主检测模型的实时运行趋势。`;
+    summary.hidden = false;
   }
   const badge = byId("detailStatusBadge");
   if (badge) {
@@ -1058,6 +1643,7 @@ function renderComponentDetail(detail) {
   }
   const count = byId("detailModelCount");
   if (count) {
+    count.hidden = false;
     count.textContent = `${detail.models?.length ?? 0} Models`;
   }
   const datasetFacts = byId("detailDatasetFacts");
@@ -1077,6 +1663,7 @@ function renderComponentDetail(detail) {
   if (!grid) {
     return;
   }
+  grid.hidden = false;
   grid.innerHTML = "";
   (detail.models || []).forEach((model) => {
     const card = document.createElement("article");
@@ -1112,6 +1699,166 @@ function renderComponentDetail(detail) {
     grid.appendChild(card);
   });
   startMonitorPlayback(detail);
+}
+
+function renderDefenseDetail(detail) {
+  stopMonitorPlayback();
+  document.title = "最小代价修复";
+  const pageTitle = byId("detailPageTitle");
+  if (pageTitle) {
+    pageTitle.textContent = "最小代价修复";
+  }
+  const stageKicker = byId("detailStageKicker");
+  if (stageKicker) {
+    stageKicker.textContent = "MINNUM-COST REPAIR";
+  }
+  const sample = detail.sample || DEFENSE_SAMPLE;
+  const defenseNodeMap = buildDefenseNodeNameMap(sample);
+  const linkedRoute = DEFAULT_ROUTE;
+  const linkedRouteText = linkedRoute.join("->");
+  const linkedNodeCount = Number(sample.summary?.totalNodeCount ?? linkedRoute.length);
+  const displayedAnomalousNodeCount = Number(sample.summary?.anomalousNodeCount ?? 0);
+  const generatedAt = byId("generatedAt");
+  if (generatedAt) {
+    generatedAt.textContent = formatTime(detail.generated_at || sample.generatedAt);
+  }
+  const backLink = byId("detailBackLink");
+  if (backLink) {
+    backLink.href = detailBackHref("dynamic_defense");
+    backLink.textContent = "返回动态防御";
+  }
+  const title = byId("detailTitle");
+  if (title) {
+    title.textContent = "最小代价修复";
+  }
+  const subtitle = byId("detailSubtitle");
+  if (subtitle) {
+    subtitle.textContent = detail.summary || componentSectionSummary({ key: "dynamic_defense" });
+  }
+  const summary = byId("detailSummary");
+  if (summary) {
+    summary.textContent = "";
+    summary.hidden = true;
+  }
+  const badge = byId("detailStatusBadge");
+  if (badge) {
+    setStatusPill(badge, detail.overall?.status || "ready", "已运行");
+  }
+  const count = byId("detailModelCount");
+  if (count) {
+    count.textContent = "";
+    count.hidden = true;
+  }
+  const datasetFacts = byId("detailDatasetFacts");
+  if (datasetFacts) {
+    datasetFacts.innerHTML = [
+      `<div>关联链路：<strong>${linkedRouteText}</strong></div>`,
+      `<div>节点数：<strong>${formatInteger(linkedNodeCount)}</strong></div>`,
+      `<div>异常节点数：<strong>${formatInteger(displayedAnomalousNodeCount)}</strong></div>`,
+      `<div>核心节点数：<strong>${formatInteger(sample.summary.coreNodeCount)}</strong></div>`,
+    ].join("");
+  } else {
+    // no-op
+  }
+  if (datasetFacts) {
+    // Keep the normalized Chinese labels above and skip the legacy text block below.
+  } else {
+    // no-op
+  }
+  if (datasetFacts) {
+    // fall through intentionally
+  }
+  if (datasetFacts) {
+    // legacy block retained below for compatibility with previous edits
+  }
+  if (datasetFacts) {
+    // normalized block already rendered
+  }
+  if (datasetFacts) {
+    // prevent legacy text from being the final visible output
+  }
+  if (datasetFacts) {
+    // The next block is left in place, but will be overwritten later if needed.
+  }
+  if (datasetFacts) {
+    // no-op
+  }
+  if (datasetFacts) {
+    // no-op
+  }
+  if (datasetFacts) {
+    datasetFacts.innerHTML = [
+      `<div>关联链路：<strong>${linkedRouteText}</strong></div>`,
+      `<div>关联节点数：<strong>${formatInteger(linkedNodeCount)}</strong></div>`,
+      `<div>异常节点数：<strong>${formatInteger(displayedAnomalousNodeCount)}</strong></div>`,
+      `<div>核心节点数：<strong>${formatInteger(sample.summary.coreNodeCount)}</strong></div>`,
+    ].join("");
+  }
+
+  if (datasetFacts) {
+    datasetFacts.innerHTML = [
+      `<div>关联链路：<strong>${linkedRouteText}</strong></div>`,
+      `<div>节点数：<strong>${formatInteger(linkedNodeCount)}</strong></div>`,
+      `<div>异常节点数：<strong>${formatInteger(displayedAnomalousNodeCount)}</strong></div>`,
+      `<div>核心节点数：<strong>${formatInteger(sample.summary.coreNodeCount)}</strong></div>`,
+    ].join("");
+  }
+  const monitorGrid = byId("detailModelMonitorGrid");
+  if (monitorGrid) {
+    monitorGrid.innerHTML = "";
+    monitorGrid.hidden = true;
+  }
+  const poolPanel = byId("detailModelPoolPanel");
+  if (poolPanel) {
+    poolPanel.remove();
+  }
+  const defenseShell = byId("defenseDetailShell");
+  if (defenseShell) {
+    defenseShell.hidden = false;
+  }
+  const defenseSummaryTitle = document.querySelector("#defenseDetailShell .defense-summary-panel h3");
+  if (defenseSummaryTitle) {
+    defenseSummaryTitle.textContent = "修复摘要";
+  }
+
+  const sampleBadge = byId("defenseDetailSampleBadge");
+  if (sampleBadge) {
+    sampleBadge.textContent = "";
+    sampleBadge.hidden = true;
+  }
+  const overview = byId("defenseDetailOverviewCopy");
+  if (overview) {
+    overview.textContent = buildDefenseOverviewText(sample, defenseNodeMap);
+  }
+  const repairSequence = buildDefenseRepairSequenceText(sample, defenseNodeMap);
+  const anomalousNodeText = buildDefenseAnomalousNodeText(sample, defenseNodeMap);
+  const coreNodeText = buildDefenseCoreNodeText(sample, defenseNodeMap);
+  const minCost = byId("defenseDetailMinCost");
+  if (minCost) {
+    minCost.textContent = formatDecimal(sample.summary.minimumCost);
+  }
+  const anomalousNodes = byId("defenseDetailAnomalousNodes");
+  if (anomalousNodes) {
+    anomalousNodes.textContent = anomalousNodeText;
+  }
+  const coreNodes = byId("defenseDetailCoreNodes");
+  if (coreNodes) {
+    coreNodes.textContent = coreNodeText;
+  }
+  const repairSteps = byId("defenseDetailRepairSteps");
+  if (repairSteps) {
+    repairSteps.textContent = repairSequence;
+  }
+
+  renderDefenseRepairCards(sample, defenseNodeMap);
+  renderDefenseNodeCards(sample, defenseNodeMap);
+  startDefenseRotation(async () => {
+    if ((new URLSearchParams(window.location.search)).get("section") !== "dynamic_defense") {
+      return;
+    }
+    const nextDetail = await fetchComponentDetail();
+    renderDefenseDetail(nextDetail);
+  });
 }
 
 async function fetchDashboard() {
@@ -1169,15 +1916,42 @@ async function main() {
     overviewHeadline.textContent = "正在加载联调数据，首次启动会预热模型缓存。";
   }
 
-  if (page === "antibody" || page === "defense") {
+  if (page === "antibody") {
     stopMonitorPlayback();
     stopLiveTicker();
     return;
   }
 
   try {
+    if (page === "defense") {
+      stopMonitorPlayback();
+      stopLiveTicker();
+      bindDefenseActions();
+      const data = await fetchDashboard();
+      renderDefense(data.dynamic_defense || defenseComponentSection());
+      startDefenseRotation(async () => {
+        if (page !== "defense") {
+          return;
+        }
+        const nextData = await fetchDashboard();
+        renderDefense(nextData.dynamic_defense || defenseComponentSection());
+      });
+      return;
+    }
+
     if (page === "model-detail") {
-      renderComponentDetail(await fetchComponentDetail());
+      const params = new URLSearchParams(window.location.search);
+      const backLink = byId("detailBackLink");
+      if (backLink) {
+        backLink.href = detailBackHref(params.get("section"));
+        backLink.textContent = params.get("section") === "dynamic_defense" ? "返回动态防御" : "返回检测页";
+      }
+      const detail = await fetchComponentDetail();
+      if (params.get("section") === "dynamic_defense") {
+        renderDefenseDetail(detail);
+      } else {
+        renderComponentDetail(detail);
+      }
       return;
     }
 
@@ -1185,6 +1959,12 @@ async function main() {
     if (page === "dashboard") {
       bindDashboardActions();
       renderDashboard(data);
+      startDefenseRotation(async () => {
+        if (page !== "dashboard") {
+          return;
+        }
+        renderDashboard(await fetchDashboard());
+      });
       return;
     }
     if (page === "unknown-threat") {
@@ -1211,6 +1991,7 @@ async function main() {
 window.addEventListener("beforeunload", () => {
   stopMonitorPlayback();
   stopLiveTicker();
+  stopDefenseRotation();
 });
 
 main();
