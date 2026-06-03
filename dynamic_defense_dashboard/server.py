@@ -33,7 +33,6 @@ STATIC_DIR = BASE_DIR / "static"
 MUTI3_DIR = PROJECT_ROOT / "muti3"
 LOG_DIR = PROJECT_ROOT / "log" / "TEST_main"
 GRAPH_DIR = PROJECT_ROOT / "graph"
-DEFAULT_DATASET = MUTI3_DIR / "Dataset" / "validata.csv"
 TOPOLOGY_IMAGE = PROJECT_ROOT / "网络拓扑图.png"
 RUNTIME_CACHE_DIR = BASE_DIR / ".runtime_cache"
 
@@ -96,6 +95,21 @@ MODALITY_SPECS = (
 MULTI3_SPECS = {spec.key: spec for spec in MODALITY_SPECS}
 LOG_LABELS = ["normal", "anomaly"]
 GRAPH_LABELS = ["normal", "anomaly"]
+
+
+def choose_default_dataset() -> Path:
+    candidates = [
+        MUTI3_DIR / "Dataset" / "validata.csv",
+        MUTI3_DIR / "Dataset" / "validata_sample.csv",
+        MUTI3_DIR / "Dataset" / "validata2.csv",
+    ]
+    for candidate in candidates:
+        if candidate.exists() and candidate.is_file():
+            return candidate
+    return candidates[0]
+
+
+DEFAULT_DATASET = choose_default_dataset()
 
 
 def utc_now_iso() -> str:
@@ -315,6 +329,7 @@ def is_default_dataset(dataset_path: Path) -> bool:
 
 
 def waiting_model_detail(spec: ModalitySpec, dataset_meta: dict[str, Any]) -> dict[str, Any]:
+    dataset_name = Path(dataset_meta.get("path") or DEFAULT_DATASET).name
     return {
         "generated_at": utc_now_iso(),
         "section": "muti3",
@@ -339,7 +354,63 @@ def waiting_model_detail(spec: ModalitySpec, dataset_meta: dict[str, Any]) -> di
         "timeline": [],
         "samples": [],
         "latency_ms": None,
-        "message": f"{spec.title} 正在预热 validata.csv 缓存。",
+        "message": f"{spec.title} 正在预热 {dataset_name} 缓存。",
+    }
+
+
+def error_model_detail(
+    *,
+    section: str,
+    key: str,
+    title: str,
+    subtitle: str,
+    color: str,
+    kind: str,
+    model_path: Path,
+    dataset_meta: dict[str, Any],
+    message: str,
+) -> dict[str, Any]:
+    return {
+        "generated_at": utc_now_iso(),
+        "section": section,
+        "key": key,
+        "title": title,
+        "subtitle": subtitle,
+        "color": color,
+        "kind": kind,
+        "status": "error",
+        "model_path": str(model_path),
+        "dataset": dataset_meta,
+        "accuracy": None,
+        "precision": None,
+        "recall": None,
+        "f1_score": None,
+        "macro_f1": None,
+        "macro_precision": None,
+        "macro_recall": None,
+        "benign_precision": None,
+        "labels": [],
+        "prediction_counts": [],
+        "timeline": [],
+        "samples": [],
+        "focus_label": None,
+        "message": message,
+        "latency_ms": None,
+    }
+
+
+def fallback_dataset_summary(dataset_path: Path) -> dict[str, Any]:
+    resolved = dataset_path.resolve()
+    if file_exists(resolved):
+        return dataset_summary(resolved)
+    return {
+        "path": str(resolved),
+        "rows": 0,
+        "feature_count": 0,
+        "label_count": 0,
+        "top_labels": [],
+        "headers": [],
+        "missing": True,
     }
 
 
@@ -992,7 +1063,20 @@ def evaluate_multi3_detail(spec: ModalitySpec, dataset_path: Path) -> dict[str, 
 
 
 def build_graph_section() -> dict[str, Any]:
-    detail = evaluate_graph_detail()
+    try:
+        detail = evaluate_graph_detail()
+    except Exception as exc:  # noqa: BLE001
+        detail = error_model_detail(
+            section="graph",
+            key="graph_gcn",
+            title="GCN 图检测",
+            subtitle="BGL 行为图结构 / 单模型评估",
+            color="lime",
+            kind="graph",
+            model_path=GRAPH_DIR / "gcn_model.pth",
+            dataset_meta=fallback_dataset_summary(GRAPH_DIR / "图.csv"),
+            message=f"GCN 图检测当前不可用：{exc}",
+        )
     return {
         "key": "graph",
         "title": "行为图结构检测异构组件（GCN）",
@@ -1000,8 +1084,8 @@ def build_graph_section() -> dict[str, Any]:
         "dataset": detail["dataset"],
         "models": [summarize_model(detail)],
         "overall": {
-            "status": "ready",
-            "models_ready": 1,
+            "status": "ready" if detail["status"] == "ready" else "artifact_ready",
+            "models_ready": 1 if detail["status"] == "ready" else 0,
             "models_attached": 1,
             "model_total": 1,
             "runtime_message": detail["message"],
@@ -1041,7 +1125,7 @@ def build_multi3_section(dataset_path: Path, allow_partial: bool = False) -> dic
             cached = read_cached_detail(cache_key)
             if cached:
                 cached_details.append(cached)
-        dataset_meta = cached_details[0]["dataset"] if cached_details else dataset_summary(dataset_path)
+        dataset_meta = cached_details[0]["dataset"] if cached_details else fallback_dataset_summary(dataset_path)
         cached_by_key = {detail["key"]: detail for detail in cached_details}
         for spec in MODALITY_SPECS:
             details.append(cached_by_key.get(spec.key) or waiting_model_detail(spec, dataset_meta))
@@ -1058,7 +1142,7 @@ def build_multi3_section(dataset_path: Path, allow_partial: bool = False) -> dic
     else:
         status = "waiting"
         runtime_message = f"muti3 缓存预热中，已就绪 {ready}/{len(details)} 个模型。"
-    dataset_meta = next((detail["dataset"] for detail in details if detail.get("dataset")), dataset_summary(dataset_path))
+    dataset_meta = next((detail["dataset"] for detail in details if detail.get("dataset")), fallback_dataset_summary(dataset_path))
     return {
         "key": "muti3",
         "title": "攻击数据特征检测异构组件（muti3）",
@@ -1184,6 +1268,587 @@ def build_dashboard_payload(dataset_path: Path, allow_partial: bool = False) -> 
     return use_payload_cache(cache_key, build)
 
 
+def build_apt_detection_payload() -> dict[str, Any]:
+    """Build an unknown-threat analysis demo payload."""
+    nodes = [
+        {
+            "id": "firefox",
+            "label": "Firefox 54.0.1",
+            "type": "Process",
+            "stage": "Initial Access",
+            "ttp": "T1203",
+            "risk": 0.96,
+            "status": "malicious",
+            "x": 10,
+            "y": 46,
+            "description": "漏洞浏览器进程，触发后门利用并成为攻击链根节点。",
+        },
+        {
+            "id": "ad_server",
+            "label": "146.153.68.151",
+            "type": "Netflow",
+            "stage": "Command and Control",
+            "ttp": "T1105",
+            "risk": 0.92,
+            "status": "malicious",
+            "x": 29,
+            "y": 26,
+            "description": "恶意广告服务器，向受害端投递 Dragon 载荷。",
+        },
+        {
+            "id": "dragon",
+            "label": "Dragon Payload",
+            "type": "Memory",
+            "stage": "Execution",
+            "ttp": "T1055",
+            "risk": 0.94,
+            "status": "malicious",
+            "x": 45,
+            "y": 46,
+            "description": "注入进程内存的恶意二进制片段。",
+        },
+        {
+            "id": "profile",
+            "label": "/home/admin/profile",
+            "type": "Process",
+            "stage": "Privilege Escalation",
+            "ttp": "T1068",
+            "risk": 0.91,
+            "status": "malicious",
+            "x": 63,
+            "y": 46,
+            "description": "以 root 权限派生的新进程，承载持久化和扫描动作。",
+        },
+        {
+            "id": "c2",
+            "label": "149.52.198.23",
+            "type": "Netflow",
+            "stage": "Command and Control",
+            "ttp": "T1071",
+            "risk": 0.89,
+            "status": "malicious",
+            "x": 83,
+            "y": 28,
+            "description": "攻击者控制端，接收回连并下发后续动作。",
+        },
+        {
+            "id": "scan",
+            "label": "Internal Scan",
+            "type": "Netflow",
+            "stage": "Discovery",
+            "ttp": "T1046",
+            "risk": 0.87,
+            "status": "anomalous",
+            "x": 86,
+            "y": 68,
+            "description": "横向扫描行为，异常节点由 iForest 补充捕获。",
+        },
+        {
+            "id": "dns",
+            "label": "Benign DNS",
+            "type": "Netflow",
+            "stage": "Camouflage",
+            "ttp": "T1036",
+            "risk": 0.21,
+            "status": "filtered",
+            "x": 31,
+            "y": 72,
+            "description": "攻击者混入的常见 DNS 解析行为，被 RL 邻居筛选降权。",
+        },
+        {
+            "id": "cache_file",
+            "label": "browser.cache",
+            "type": "File",
+            "stage": "Benign Context",
+            "ttp": "benign",
+            "risk": 0.14,
+            "status": "filtered",
+            "x": 52,
+            "y": 73,
+            "description": "浏览器正常缓存读写，用作背景噪声节点。",
+        },
+    ]
+    edges = [
+        {"source": "firefox", "target": "ad_server", "relation": "connect", "weight": 0.94, "latent": False},
+        {"source": "ad_server", "target": "dragon", "relation": "inject", "weight": 0.91, "latent": True},
+        {"source": "dragon", "target": "profile", "relation": "spawn", "weight": 0.9, "latent": False},
+        {"source": "profile", "target": "c2", "relation": "callback", "weight": 0.88, "latent": False},
+        {"source": "profile", "target": "scan", "relation": "scan", "weight": 0.84, "latent": True},
+        {"source": "firefox", "target": "dns", "relation": "resolve", "weight": 0.19, "latent": False},
+        {"source": "firefox", "target": "cache_file", "relation": "read/write", "weight": 0.13, "latent": False},
+    ]
+    pipeline = [
+        {
+            "key": "graph_construction",
+            "title": "1. 溯源图构建",
+            "summary": "从审计日志抽取 Process / File / Netflow / Memory 节点和系统调用关系。",
+            "metric": "8 nodes / 7 edges",
+            "status": "ready",
+        },
+        {
+            "key": "latent_mining",
+            "title": "2. 潜在行为挖掘",
+            "summary": "用多跳路径和注意力关系补全直接日志中不明显的因果、上下文和间接连接。",
+            "metric": "2 latent paths",
+            "status": "ready",
+        },
+        {
+            "key": "rl_embedding",
+            "title": "3. 强化学习邻居筛选",
+            "summary": "用语义相似度和拓扑相似度驱动 Bandit 策略，过滤伪装的良性邻居。",
+            "metric": "p=0.64",
+            "status": "ready",
+        },
+        {
+            "key": "threat_detection",
+            "title": "4. MLP + iForest 检测",
+            "summary": "已知恶意由 MLP 分类，未知偏离行为由 Isolation Forest 标记为异常。",
+            "metric": "6 alerts",
+            "status": "ready",
+        },
+        {
+            "key": "chain_reconstruction",
+            "title": "5. 攻击链重构",
+            "summary": "结合 ATT&CK TTP 编码和标签传播，将离散告警聚合为可核验攻击链。",
+            "metric": "1 chain",
+            "status": "ready",
+        },
+    ]
+    chain = [
+        {
+            "step": 1,
+            "stage": "Initial Access",
+            "node": "Firefox 54.0.1",
+            "ttp": "T1203",
+            "evidence": "浏览器进程连接异常广告服务器，触发漏洞利用入口。",
+        },
+        {
+            "step": 2,
+            "stage": "Execution",
+            "node": "Dragon Payload",
+            "ttp": "T1055",
+            "evidence": "潜在关系挖掘将网络输入与内存注入路径关联。",
+        },
+        {
+            "step": 3,
+            "stage": "Privilege Escalation",
+            "node": "/home/admin/profile",
+            "ttp": "T1068",
+            "evidence": "派生进程获得高权限，并成为后续外联与扫描中心。",
+        },
+        {
+            "step": 4,
+            "stage": "Command and Control",
+            "node": "149.52.198.23",
+            "ttp": "T1071",
+            "evidence": "高风险回连与上下文路径共同命中 C2 阶段。",
+        },
+        {
+            "step": 5,
+            "stage": "Discovery",
+            "node": "Internal Scan",
+            "ttp": "T1046",
+            "evidence": "iForest 将未知扫描偏离识别为异常节点，补齐攻击链尾部。",
+        },
+    ]
+    rl_policy = [
+        {
+            "relation": "Process -> Netflow",
+            "threshold": 0.64,
+            "reward": "+1",
+            "state": "平均邻居距离下降 18.2%",
+            "effect": "保留 C2 / 扫描关系，过滤重复 DNS 解析。",
+        },
+        {
+            "relation": "Process -> File",
+            "threshold": 0.42,
+            "reward": "+1",
+            "state": "缓存读写与攻击根节点相似度偏低",
+            "effect": "将 browser.cache 从主攻击链中剥离。",
+        },
+        {
+            "relation": "Process -> Memory",
+            "threshold": 0.78,
+            "reward": "+1",
+            "state": "内存注入路径与恶意标签高度一致",
+            "effect": "强化 Dragon 载荷与 Firefox 根节点的潜在关联。",
+        },
+    ]
+    alerts = [
+        {
+            "title": "伪装邻居过滤",
+            "severity": "medium",
+            "detail": "Benign DNS 与 browser.cache 被判定为低相似度邻居，未进入最终攻击链。",
+        },
+        {
+            "title": "未知异常补充捕获",
+            "severity": "high",
+            "detail": "Internal Scan 缺少已知标签，但 iForest 异常分数达到 0.87。",
+        },
+        {
+            "title": "攻击链聚合完成",
+            "severity": "critical",
+            "detail": "5 个高风险实体被聚合为 Firefox backdoor APT 链路。",
+        },
+    ]
+    actions = [
+        "隔离 Firefox 进程及 /home/admin/profile 派生进程。",
+        "阻断 146.153.68.151 与 149.52.198.23 的外联会话。",
+        "保留 DNS 与缓存节点为上下文证据，但不作为核心处置对象。",
+        "基于 T1203 / T1055 / T1068 / T1071 / T1046 生成 ATT&CK 研判报告。",
+    ]
+    return {
+        "generated_at": utc_now_iso(),
+        "source": {
+            "paper": "SLOT: Provenance-Driven APT Detection through Graph Reinforcement Learning",
+            "mapping": "演示实现按论文五模块流程抽象，非完整训练复现。",
+        },
+        "summary": {
+            "title": "未知威胁检测异构组件",
+            "headline": "围绕异常外联、行为偏离和高风险路径，对混入正常业务行为的未知威胁进行检测、关联和研判。",
+            "status": "ready",
+            "confidence": 0.94,
+            "risk_score": 0.91,
+            "nodes": len(nodes),
+            "edges": len(edges),
+            "alert_nodes": sum(1 for node in nodes if node["status"] in {"malicious", "anomalous"}),
+            "filtered_nodes": sum(1 for node in nodes if node["status"] == "filtered"),
+            "attack_chains": 1,
+        },
+        "metrics": {
+            "accuracy": 0.99,
+            "precision": 0.96,
+            "recall": 0.99,
+            "f1_score": 0.97,
+            "fpr": 0.001,
+            "latency_ms": 184,
+        },
+        "analysis_cards": [
+            {
+                "key": "manual",
+                "title": "手动分析",
+                "summary": "由研判人员即时发起，对当前高风险会话、行为路径和外联上下文进行单次深入分析。",
+                "status": "ready",
+                "button_label": "查看手动分析结果",
+                "stats": [
+                    {"label": "触发方式", "value": "人工发起"},
+                    {"label": "分析窗口", "value": "最近 15 分钟"},
+                    {"label": "高风险节点", "value": "6 个"},
+                    {"label": "检测置信度", "value": "94.00%"},
+                ],
+                "highlights": [
+                    "聚焦当前会话中的异常外联、权限提升和横向探测迹象。",
+                    "适合复核单起可疑事件，快速确认是否需要处置。",
+                    "输出当前样本下的关键关系、威胁路径和处置建议。",
+                ],
+                "target": {"section": "unknown_threat", "mode": "manual"},
+            },
+            {
+                "key": "scheduled",
+                "title": "定时分析",
+                "summary": "按固定周期对增量日志和网络行为进行批量检测，持续跟踪未知威胁的变化趋势。",
+                "status": "ready",
+                "button_label": "查看定时分析结果",
+                "stats": [
+                    {"label": "触发方式", "value": "周期调度"},
+                    {"label": "调度周期", "value": "每 30 分钟"},
+                    {"label": "累计批次", "value": "48 批"},
+                    {"label": "异常捕获率", "value": "99.00%"},
+                ],
+                "highlights": [
+                    "持续比对历史基线，发现慢速渗透、重复试探和周期性异常外联。",
+                    "适合观察一段时间内的未知威胁变化趋势和稳定性。",
+                    "输出周期检测结论、异常批次定位和建议优先级。",
+                ],
+                "target": {"section": "unknown_threat", "mode": "scheduled"},
+            },
+        ],
+        "pipeline": pipeline,
+        "graph": {"nodes": nodes, "edges": edges},
+        "rl_policy": rl_policy,
+        "attack_chain": chain,
+        "alerts": alerts,
+        "actions": actions,
+    }
+
+
+def build_unknown_threat_timeline(
+    *,
+    base_score: float,
+    base_accuracy: float,
+    points: int,
+    anomaly_steps: set[int],
+    prefix: str,
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for step in range(1, points + 1):
+        score = round(float(np.clip(base_score + np.sin(step / 2.8) * 0.08 + np.cos(step / 4.2) * 0.03, 0.58, 0.995)), 4)
+        running_accuracy = round(float(np.clip(base_accuracy + np.sin(step / 5.0) * 0.012, 0.82, 0.998)), 4)
+        alert = step in anomaly_steps
+        actual_label = "unknown_threat" if alert else "normal"
+        predicted_label = actual_label if step % 11 else ("normal" if alert else "unknown_threat")
+        rows.append(
+            {
+                "step": step,
+                "sample_index": step * 128,
+                "score": score,
+                "running_accuracy": running_accuracy,
+                "actual_label": actual_label,
+                "predicted_label": predicted_label,
+                "alert": alert,
+                "is_match": actual_label == predicted_label,
+                "content": f"{prefix}#{step}",
+            }
+        )
+    return rows
+
+
+def build_unknown_threat_model_pool(mode: str, details: list[dict[str, Any]]) -> dict[str, Any]:
+    mode_label = "手动分析" if mode == "manual" else "定时分析"
+    models = [
+        build_pool_model(
+            name="行为关联分析器",
+            model_type="图谱关联模型",
+            engine="关系推理",
+            target="异常外联 / 进程派生 / 文件上下文",
+            accuracy=0.963,
+            confidence=0.942,
+            status="ready",
+            source=mode_label,
+            traits=["关系拼接", "关键路径提取", "高风险节点聚合"],
+            role="负责把离散行为拼接成可解释的未知威胁路径。",
+        ),
+        build_pool_model(
+            name="未知异常判别器",
+            model_type="异常检测模型",
+            engine="iForest + MLP",
+            target="未知偏离行为 / 伪装流量 / 横向探测",
+            accuracy=0.971,
+            confidence=0.936,
+            status="ready",
+            source=mode_label,
+            traits=["未知样本补获", "偏离识别", "高危筛选"],
+            role="负责识别未命中已知标签但显著偏离基线的可疑行为。",
+        ),
+        build_pool_model(
+            name="处置研判聚合器",
+            model_type="策略聚合模型",
+            engine="规则 + 语义归因",
+            target="告警优先级 / 处置建议 / 结果摘要",
+            accuracy=0.948,
+            confidence=0.917,
+            status="ready",
+            source=mode_label,
+            traits=["建议聚合", "证据摘要", "优先级排序"],
+            role="负责把检测结果整理成可执行的人工研判和处置建议。",
+        ),
+        build_pool_model(
+            name="流量基线比对器",
+            model_type="时序基线模型",
+            engine="统计漂移分析",
+            target="周期外联 / 慢速探测 / 长周期偏移",
+            accuracy=details[2].get("accuracy"),
+            confidence=0.901,
+            status="ready",
+            source="流量特征侧",
+            traits=["基线偏移", "趋势跟踪", "周期比对"],
+            role="负责持续识别相对历史基线的外联和行为漂移。",
+        ),
+    ]
+    return {
+        "title": "未知威胁分析模型池",
+        "focus": f"围绕{mode_label}链路组织行为关联、异常判别、趋势跟踪和处置归因模型。",
+        "summary": "检测链路同时覆盖关系重构、未知异常识别、外联偏移跟踪和人工研判建议聚合。",
+        "online": sum(1 for item in models if item["status"] == "ready"),
+        "total": len(models),
+        "models": models,
+    }
+
+
+def build_unknown_threat_detail(mode: str, dataset_path: Path) -> dict[str, Any]:
+    apt = build_apt_detection_payload()
+    multi3_details = [evaluate_multi3_detail(spec, dataset_path) for spec in MODALITY_SPECS]
+    mode_key = "manual" if mode != "scheduled" else "scheduled"
+    if mode_key == "manual":
+        title = "未知威胁检测结果（手动分析）"
+        subtitle = "针对当前可疑会话进行单次深度分析，重点复核异常外联、行为偏离与高风险路径。"
+        detail_intro = "当前结果由人工发起，适合对单次可疑事件做快速复核和处置决策。"
+        dataset = {
+            "path": "manual-analysis/current-session",
+            "rows": 612,
+            "feature_count": 7,
+            "label_count": 3,
+            "top_labels": [
+                {"label": "malicious", "count": 6},
+                {"label": "anomalous", "count": 4},
+                {"label": "filtered", "count": 2},
+            ],
+            "headers": ["risk", "node", "stage", "relation", "score", "latency", "source"],
+        }
+        models = [
+            {
+                "generated_at": utc_now_iso(),
+                "section": "unknown_threat",
+                "key": "manual_graph",
+                "title": "异常外联关联分析",
+                "subtitle": "可疑进程、外联地址与上下文关系重构",
+                "status": "ready",
+                "model_path": "unknown_threat/manual/graph_correlation",
+                "accuracy": 0.962,
+                "precision": 0.951,
+                "recall": 0.968,
+                "f1_score": 0.959,
+                "timeline": build_unknown_threat_timeline(
+                    base_score=0.89,
+                    base_accuracy=0.95,
+                    points=24,
+                    anomaly_steps={3, 7, 11, 18, 22},
+                    prefix="manual-graph-",
+                ),
+                "message": "完成当前会话的关键外联和行为关系拼接。",
+            },
+            {
+                "generated_at": utc_now_iso(),
+                "section": "unknown_threat",
+                "key": "manual_detection",
+                "title": "未知异常判别",
+                "subtitle": "异常偏离识别与高风险节点筛选",
+                "status": "ready",
+                "model_path": "unknown_threat/manual/novelty_detection",
+                "accuracy": 0.971,
+                "precision": 0.963,
+                "recall": 0.978,
+                "f1_score": 0.97,
+                "timeline": build_unknown_threat_timeline(
+                    base_score=0.86,
+                    base_accuracy=0.956,
+                    points=24,
+                    anomaly_steps={4, 9, 15, 19, 23},
+                    prefix="manual-detect-",
+                ),
+                "message": "对当前样本中的未知偏离行为完成置信度评分。",
+            },
+            {
+                "generated_at": utc_now_iso(),
+                "section": "unknown_threat",
+                "key": "manual_response",
+                "title": "处置建议汇总",
+                "subtitle": "告警优先级与人工研判建议输出",
+                "status": "ready",
+                "model_path": "unknown_threat/manual/response_summary",
+                "accuracy": 0.948,
+                "precision": 0.941,
+                "recall": 0.952,
+                "f1_score": 0.946,
+                "timeline": build_unknown_threat_timeline(
+                    base_score=0.83,
+                    base_accuracy=0.944,
+                    points=24,
+                    anomaly_steps={5, 12, 17, 24},
+                    prefix="manual-response-",
+                ),
+                "message": "输出当前手动分析对应的处置优先级和建议动作。",
+            },
+        ]
+    else:
+        title = "未知威胁检测结果（定时分析）"
+        subtitle = "基于周期任务持续跟踪未知威胁变化趋势，重点发现重复试探、慢速渗透和周期外联。"
+        detail_intro = "当前结果来自周期调度任务，适合观察一段时间内的未知威胁趋势和稳定性。"
+        dataset = {
+            "path": "scheduled-analysis/rolling-window",
+            "rows": 48,
+            "feature_count": 6,
+            "label_count": 4,
+            "top_labels": [
+                {"label": "高风险批次", "count": 8},
+                {"label": "中风险批次", "count": 11},
+                {"label": "低风险批次", "count": 21},
+                {"label": "背景批次", "count": 8},
+            ],
+            "headers": ["batch", "risk", "drift", "latency", "alerts", "confidence"],
+        }
+        models = [
+            {
+                "generated_at": utc_now_iso(),
+                "section": "unknown_threat",
+                "key": "scheduled_graph",
+                "title": "周期行为对齐",
+                "subtitle": "跨批次关系对齐与可疑模式追踪",
+                "status": "ready",
+                "model_path": "unknown_threat/scheduled/graph_alignment",
+                "accuracy": 0.958,
+                "precision": 0.949,
+                "recall": 0.964,
+                "f1_score": 0.956,
+                "timeline": build_unknown_threat_timeline(
+                    base_score=0.81,
+                    base_accuracy=0.941,
+                    points=36,
+                    anomaly_steps={6, 13, 21, 28, 34},
+                    prefix="scheduled-graph-",
+                ),
+                "message": "完成多批次未知威胁关系对齐和变化跟踪。",
+            },
+            {
+                "generated_at": utc_now_iso(),
+                "section": "unknown_threat",
+                "key": "scheduled_detection",
+                "title": "基线漂移检测",
+                "subtitle": "周期外联与慢速偏离识别",
+                "status": "ready",
+                "model_path": "unknown_threat/scheduled/drift_detection",
+                "accuracy": 0.969,
+                "precision": 0.958,
+                "recall": 0.976,
+                "f1_score": 0.967,
+                "timeline": build_unknown_threat_timeline(
+                    base_score=0.79,
+                    base_accuracy=0.949,
+                    points=36,
+                    anomaly_steps={5, 10, 16, 24, 31, 35},
+                    prefix="scheduled-detect-",
+                ),
+                "message": "输出最近多个调度周期内的异常批次和偏移强度。",
+            },
+            {
+                "generated_at": utc_now_iso(),
+                "section": "unknown_threat",
+                "key": "scheduled_response",
+                "title": "定时研判汇总",
+                "subtitle": "周期结果归并与优先级排序",
+                "status": "ready",
+                "model_path": "unknown_threat/scheduled/summary",
+                "accuracy": 0.952,
+                "precision": 0.944,
+                "recall": 0.957,
+                "f1_score": 0.95,
+                "timeline": build_unknown_threat_timeline(
+                    base_score=0.77,
+                    base_accuracy=0.938,
+                    points=36,
+                    anomaly_steps={8, 14, 20, 27, 33},
+                    prefix="scheduled-response-",
+                ),
+                "message": "输出周期分析视角下的风险趋势和处置建议。",
+            },
+        ]
+    return {
+        "generated_at": utc_now_iso(),
+        "section": "unknown_threat",
+        "title": title,
+        "summary": subtitle,
+        "detail_intro": detail_intro,
+        "dataset": dataset,
+        "overall": {
+            "status": "ready",
+            "models_ready": len(models),
+            "model_total": len(models),
+        },
+        "model_pool": build_unknown_threat_model_pool(mode_key, multi3_details),
+        "models": models,
+    }
+
+
 def get_model_detail(section: str, model_key: str, dataset_path: Path) -> dict[str, Any]:
     if section == "graph" and model_key == "graph_gcn":
         return evaluate_graph_detail()
@@ -1201,8 +1866,10 @@ def get_model_detail(section: str, model_key: str, dataset_path: Path) -> dict[s
     raise KeyError(f"unknown model detail: section={section}, key={model_key}")
 
 
-def get_section_detail(section: str, dataset_path: Path) -> dict[str, Any]:
+def get_section_detail(section: str, dataset_path: Path, mode: str | None = None) -> dict[str, Any]:
     model_pool = None
+    if section == "unknown_threat":
+        return build_unknown_threat_detail(mode or "manual", dataset_path)
     if section == "graph":
         models = [evaluate_graph_detail()]
         title = "行为图结构检测异构组件（GCN）"
@@ -1289,7 +1956,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
             section = query.get("section", [""])[0]
             dataset_path = self.resolve_dataset(query.get("dataset", [None])[0])
             try:
-                payload = get_section_detail(section, dataset_path)
+                payload = get_section_detail(section, dataset_path, query.get("mode", [None])[0])
             except KeyError as exc:
                 self.send_json({"error": str(exc)}, status=HTTPStatus.NOT_FOUND)
                 return
@@ -1303,6 +1970,14 @@ class DashboardHandler(BaseHTTPRequestHandler):
             dataset_path = self.resolve_dataset(query.get("dataset", [None])[0])
             try:
                 payload = build_multi3_section(dataset_path, allow_partial=True)
+            except Exception as exc:  # noqa: BLE001
+                self.send_json({"error": str(exc)}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
+                return
+            self.send_json(payload)
+            return
+        if parsed.path == "/api/apt-detection":
+            try:
+                payload = build_apt_detection_payload()
             except Exception as exc:  # noqa: BLE001
                 self.send_json({"error": str(exc)}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
                 return

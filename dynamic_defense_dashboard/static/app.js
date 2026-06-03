@@ -1,4 +1,4 @@
-const DEFAULT_DATASET = "muti3/Dataset/validata.csv";
+const DEFAULT_DATASET = "muti3/Dataset/validata_sample.csv";
 const DEFAULT_ROUTE = ["host1", "m1", "m3", "m4", "m7", "server1"];
 const state = {
   dataset: DEFAULT_DATASET,
@@ -323,6 +323,14 @@ function setStatusPill(node, status, text) {
 function componentDetailHref(sectionKey) {
   const params = new URLSearchParams();
   params.set("section", sectionKey);
+  params.set("dataset", state.dataset || DEFAULT_DATASET);
+  return `/model-detail.html?${params.toString()}`;
+}
+
+function unknownThreatDetailHref(mode = "manual") {
+  const params = new URLSearchParams();
+  params.set("section", "unknown_threat");
+  params.set("mode", mode);
   params.set("dataset", state.dataset || DEFAULT_DATASET);
   return `/model-detail.html?${params.toString()}`;
 }
@@ -687,6 +695,321 @@ function renderDashboardThreatModule(data) {
   renderTopologyScenes(data.overview.active_path || DEFAULT_ROUTE);
 }
 
+function renderThreatAnalysisCards(cards = []) {
+  const container = byId("threatAnalysisGrid");
+  if (!container) {
+    return;
+  }
+  container.innerHTML = "";
+  cards.forEach((card) => {
+    const article = document.createElement("article");
+    article.className = "component-card threat-analysis-card";
+    article.innerHTML = `
+      <div class="component-card-header">
+        <div>
+          <h3>${card.title || "--"}</h3>
+          <p>${card.summary || "--"}</p>
+        </div>
+        <span class="status-pill status-${normalizeStatus(card.status)}">${statusText(card.status)}</span>
+      </div>
+      <div class="component-stat-grid threat-analysis-stat-grid">
+        ${(card.stats || []).map((item) => `
+          <div class="metric-chip">
+            <span>${item.label}</span>
+            <strong>${item.value}</strong>
+          </div>
+        `).join("")}
+      </div>
+      <div class="component-model-grid threat-analysis-highlight-list">
+        ${(card.highlights || []).map((item) => `
+          <article class="component-model-item threat-analysis-highlight">
+            <p>${item}</p>
+          </article>
+        `).join("")}
+      </div>
+      <div class="component-card-footer">
+        <a class="primary-button threat-analysis-action" href="${unknownThreatDetailHref(card.target?.mode || "manual")}">${card.button_label || "查看分析结果"}</a>
+      </div>
+    `;
+    container.appendChild(article);
+  });
+}
+
+function aptStatusLabel(status) {
+  const labels = {
+    malicious: "恶意",
+    anomalous: "未知异常",
+    filtered: "已过滤",
+    ready: "就绪",
+  };
+  return labels[status] || status || "--";
+}
+
+function aptNodeTone(status) {
+  if (status === "malicious") {
+    return "danger";
+  }
+  if (status === "anomalous") {
+    return "amber";
+  }
+  if (status === "filtered") {
+    return "muted";
+  }
+  return "cyan";
+}
+
+function renderAptGraph(graph = {}) {
+  const container = byId("aptGraphStage");
+  if (!container) {
+    return;
+  }
+  const nodes = graph.nodes || [];
+  const edges = graph.edges || [];
+  const nodeMap = new Map(nodes.map((node) => [node.id, node]));
+  const edgeHtml = edges.map((edge) => {
+    const source = nodeMap.get(edge.source);
+    const target = nodeMap.get(edge.target);
+    if (!source || !target) {
+      return "";
+    }
+    const classes = ["apt-edge"];
+    if (edge.latent) {
+      classes.push("is-latent");
+    }
+    if (edge.weight < 0.35) {
+      classes.push("is-filtered");
+    }
+    const midX = (source.x + target.x) / 2;
+    const midY = (source.y + target.y) / 2;
+    return `
+      <line class="${classes.join(" ")}" x1="${source.x}" y1="${source.y}" x2="${target.x}" y2="${target.y}" />
+      <text class="apt-edge-label" x="${midX}" y="${midY - 2}">${edge.relation}</text>
+    `;
+  }).join("");
+  const nodeHtml = nodes.map((node) => `
+    <article class="apt-node apt-node--${aptNodeTone(node.status)}" style="left:${node.x}%; top:${node.y}%;">
+      <span>${node.type}</span>
+      <strong>${node.label}</strong>
+      <small>${node.ttp} · ${aptStatusLabel(node.status)}</small>
+    </article>
+  `).join("");
+  container.innerHTML = `
+    <svg class="apt-graph-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+      ${edgeHtml}
+    </svg>
+    ${nodeHtml}
+  `;
+}
+
+function renderAptKpis(data) {
+  const grid = byId("aptKpiGrid");
+  if (!grid) {
+    return;
+  }
+  const summary = data.summary || {};
+  const metrics = data.metrics || {};
+  const items = [
+    ["风险评分", formatPercent(summary.risk_score)],
+    ["检测置信度", formatPercent(summary.confidence)],
+    ["告警节点", `${summary.alert_nodes ?? 0}/${summary.nodes ?? 0}`],
+    ["误报率", formatPercent(metrics.fpr)],
+    ["F1", formatPercent(metrics.f1_score)],
+  ];
+  grid.innerHTML = items.map(([label, value]) => `
+    <article class="apt-kpi-card">
+      <span>${label}</span>
+      <strong>${value}</strong>
+    </article>
+  `).join("");
+}
+
+function renderAptPipeline(pipeline = []) {
+  const container = byId("aptPipelineList");
+  if (!container) {
+    return;
+  }
+  container.innerHTML = pipeline.map((item) => `
+    <article class="apt-pipeline-item">
+      <div>
+        <strong>${item.title}</strong>
+        <p>${item.summary}</p>
+      </div>
+      <span>${item.metric}</span>
+    </article>
+  `).join("");
+}
+
+function renderAptPolicy(policy = []) {
+  const container = byId("aptPolicyList");
+  if (!container) {
+    return;
+  }
+  container.innerHTML = policy.map((item) => `
+    <article class="apt-policy-item">
+      <div class="apt-policy-head">
+        <strong>${item.relation}</strong>
+        <span>阈值 ${item.threshold}</span>
+      </div>
+      <p>${item.state}</p>
+      <small>${item.effect}</small>
+    </article>
+  `).join("");
+}
+
+function renderAptChain(chain = []) {
+  const container = byId("aptChainList");
+  if (!container) {
+    return;
+  }
+  container.innerHTML = chain.map((item) => `
+    <article class="apt-chain-item">
+      <span>${item.step}</span>
+      <div>
+        <strong>${item.stage} · ${item.ttp}</strong>
+        <p>${item.node}</p>
+        <small>${item.evidence}</small>
+      </div>
+    </article>
+  `).join("");
+}
+
+function renderAptAlerts(alerts = [], actions = []) {
+  const alertList = byId("aptAlertList");
+  if (alertList) {
+    alertList.innerHTML = alerts.map((item) => `
+      <article class="apt-alert-item apt-alert-item--${item.severity}">
+        <strong>${item.title}</strong>
+        <p>${item.detail}</p>
+      </article>
+    `).join("");
+  }
+  const actionList = byId("aptActionList");
+  if (actionList) {
+    actionList.innerHTML = actions.map((item) => `<div class="apt-action-item">${item}</div>`).join("");
+  }
+}
+
+function renderAptDetection(data) {
+  if (!byId("aptKpiGrid")) {
+    return;
+  }
+  const title = byId("aptTitle");
+  if (title) {
+    title.textContent = data.summary?.title || "未知威胁检测异构组件";
+  }
+  const headline = byId("aptHeadline");
+  if (headline) {
+    headline.textContent = data.summary?.headline || "--";
+  }
+  const graphStatus = byId("aptGraphStatus");
+  if (graphStatus) {
+    graphStatus.textContent = `${data.summary?.alert_nodes ?? 0} 个告警节点 / ${data.summary?.filtered_nodes ?? 0} 个伪装邻居已过滤`;
+  }
+  renderThreatAnalysisCards(data.analysis_cards || []);
+  renderAptKpis(data);
+  renderAptGraph(data.graph);
+  renderAptPipeline(data.pipeline);
+  renderAptPolicy(data.rl_policy);
+  renderAptChain(data.attack_chain);
+  renderAptAlerts(data.alerts, data.actions);
+}
+
+function renderAptUnavailable(message = "未知威胁分析数据暂不可用。") {
+  if (!byId("aptKpiGrid")) {
+    return;
+  }
+  const title = byId("aptTitle");
+  if (title) {
+    title.textContent = "未知威胁检测异构组件";
+  }
+  const headline = byId("aptHeadline");
+  if (headline) {
+    headline.textContent = message;
+  }
+  const graphStatus = byId("aptGraphStatus");
+  if (graphStatus) {
+    graphStatus.textContent = "数据未加载";
+  }
+  const analysisGrid = byId("threatAnalysisGrid");
+  if (analysisGrid) {
+    analysisGrid.innerHTML = `
+      <article class="component-card threat-analysis-card">
+        <div class="component-card-header">
+          <div>
+            <h3>手动分析</h3>
+            <p>当前无法加载手动分析结果，请检查接口状态后重试。</p>
+          </div>
+          <span class="status-pill status-waiting">待运行</span>
+        </div>
+        <div class="component-card-footer">
+          <a class="ghost-button text-link-button threat-analysis-action" href="${unknownThreatDetailHref("manual")}">进入手动分析结果</a>
+        </div>
+      </article>
+      <article class="component-card threat-analysis-card">
+        <div class="component-card-header">
+          <div>
+            <h3>定时分析</h3>
+            <p>当前无法加载定时分析结果，页面已进入可见降级状态。</p>
+          </div>
+          <span class="status-pill status-waiting">待运行</span>
+        </div>
+        <div class="component-card-footer">
+          <a class="ghost-button text-link-button threat-analysis-action" href="${unknownThreatDetailHref("scheduled")}">进入定时分析结果</a>
+        </div>
+      </article>
+    `;
+  }
+  const kpiGrid = byId("aptKpiGrid");
+  if (kpiGrid) {
+    kpiGrid.innerHTML = `
+      <article class="apt-kpi-card apt-kpi-card--empty">
+        <span>模块状态</span>
+        <strong>未渲染</strong>
+      </article>
+      <article class="apt-kpi-card apt-kpi-card--empty">
+        <span>原因</span>
+        <strong>分析接口不可用</strong>
+      </article>
+      <article class="apt-kpi-card apt-kpi-card--empty">
+        <span>检查项</span>
+        <strong>/api/apt-detection</strong>
+      </article>
+      <article class="apt-kpi-card apt-kpi-card--empty">
+        <span>当前表现</span>
+        <strong>前端已降级</strong>
+      </article>
+      <article class="apt-kpi-card apt-kpi-card--empty">
+        <span>建议</span>
+        <strong>重启新服务</strong>
+      </article>
+    `;
+  }
+  const graphStage = byId("aptGraphStage");
+  if (graphStage) {
+    graphStage.innerHTML = `<div class="apt-empty-state">${message}</div>`;
+  }
+  const pipelineList = byId("aptPipelineList");
+  if (pipelineList) {
+    pipelineList.innerHTML = `<div class="apt-empty-state">未拿到未知威胁检测链路数据。</div>`;
+  }
+  const policyList = byId("aptPolicyList");
+  if (policyList) {
+    policyList.innerHTML = `<div class="apt-empty-state">未拿到强化学习邻居筛选数据。</div>`;
+  }
+  const chainList = byId("aptChainList");
+  if (chainList) {
+    chainList.innerHTML = `<div class="apt-empty-state">未拿到攻击链重构数据。</div>`;
+  }
+  const alertList = byId("aptAlertList");
+  if (alertList) {
+    alertList.innerHTML = `<div class="apt-empty-state">未拿到告警结果。</div>`;
+  }
+  const actionList = byId("aptActionList");
+  if (actionList) {
+    actionList.innerHTML = `<div class="apt-empty-state">未拿到处置建议。</div>`;
+  }
+}
+
 function switchThreatTab(tabKey, scope = document) {
   const buttons = scope.querySelectorAll("[data-threat-tab]");
   const panels = scope.querySelectorAll("[data-threat-panel]");
@@ -715,7 +1038,7 @@ function bindThreatTabs() {
         switchThreatTab(button.dataset.threatTab || "realtime", scope);
       });
     });
-    switchThreatTab("realtime", scope);
+    switchThreatTab(nav.dataset.defaultThreatTab || "realtime", scope);
   });
 }
 
@@ -1135,15 +1458,35 @@ async function fetchComponentDetail() {
   return response.json();
 }
 
+async function fetchAptDetection() {
+  const response = await fetch("/api/apt-detection");
+  if (!response.ok) {
+    throw new Error(`unknown threat analysis request failed: ${response.status}`);
+  }
+  return response.json();
+}
+
 function bindUnknownThreatActions() {
   bindThreatTabs();
 
   byId("runButton")?.addEventListener("click", async () => {
-    renderUnknownThreat(await fetchDashboard());
+    const [dashboard, apt] = await Promise.all([fetchDashboard(), fetchAptDetection().catch(() => null)]);
+    renderUnknownThreat(dashboard);
+    if (apt) {
+      renderAptDetection(apt);
+    } else {
+      renderAptUnavailable("未知威胁分析接口不可用，页面已进入可见降级状态。");
+    }
   });
 
   byId("refreshButton")?.addEventListener("click", async () => {
-    renderUnknownThreat(await fetchDashboard());
+    const [dashboard, apt] = await Promise.all([fetchDashboard(), fetchAptDetection().catch(() => null)]);
+    renderUnknownThreat(dashboard);
+    if (apt) {
+      renderAptDetection(apt);
+    } else {
+      renderAptUnavailable("未知威胁分析接口不可用，页面已进入可见降级状态。");
+    }
   });
 }
 
@@ -1152,7 +1495,13 @@ function bindDashboardActions() {
   bindThreatTabs();
 
   byId("refreshButton")?.addEventListener("click", async () => {
-    renderDashboard(await fetchDashboard());
+    const [dashboard, apt] = await Promise.all([fetchDashboard(), fetchAptDetection().catch(() => null)]);
+    renderDashboard(dashboard);
+    if (apt) {
+      renderAptDetection(apt);
+    } else {
+      renderAptUnavailable("未知威胁分析接口不可用，页面已进入可见降级状态。");
+    }
   });
 }
 
@@ -1182,14 +1531,30 @@ async function main() {
     }
 
     const data = await fetchDashboard();
+    const aptDataPromise = fetchAptDetection().catch((error) => {
+      console.error(error);
+      return null;
+    });
     if (page === "dashboard") {
       bindDashboardActions();
       renderDashboard(data);
+      const aptData = await aptDataPromise;
+      if (aptData) {
+        renderAptDetection(aptData);
+      } else {
+        renderAptUnavailable("未知威胁分析接口不可用，当前看到的是可见降级提示，不是空白占位。");
+      }
       return;
     }
     if (page === "unknown-threat") {
       bindUnknownThreatActions();
       renderUnknownThreat(data);
+      const aptData = await aptDataPromise;
+      if (aptData) {
+        renderAptDetection(aptData);
+      } else {
+        renderAptUnavailable("未知威胁分析接口不可用，当前看到的是可见降级提示，不是空白占位。");
+      }
     }
   } catch (error) {
     console.error(error);
