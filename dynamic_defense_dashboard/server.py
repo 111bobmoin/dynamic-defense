@@ -355,11 +355,14 @@ def missing_dataset_summary(dataset_path: Path) -> dict[str, Any]:
     }
 
 
-def read_legacy_multi3_detail(spec: ModalitySpec, dataset_path: Path) -> dict[str, Any] | None:
-    if not should_use_legacy_multi3_cache(dataset_path):
-        return None
+def read_preferred_multi3_detail(spec: ModalitySpec, dataset_path: Path) -> dict[str, Any] | None:
     model_path = MUTI3_DIR / spec.model_path
     cache_key = cache_key_for(f"muti3_{spec.key}_detail", [model_path, dataset_path])
+    cached = read_cached_detail(cache_key)
+    if cached:
+        return cached
+    if not is_default_dataset(dataset_path):
+        return None
     cached = load_persistent_cache_payload(cache_key[0])
     if cached:
         with DETAIL_CACHE_LOCK:
@@ -1049,9 +1052,9 @@ def evaluate_multi3_detail(spec: ModalitySpec, dataset_path: Path) -> dict[str, 
     model_path = MUTI3_DIR / spec.model_path
     dataset_path = dataset_path.resolve()
     cache_key = cache_key_for(f"muti3_{spec.key}_detail", [model_path, dataset_path])
-    legacy_cached = read_legacy_multi3_detail(spec, dataset_path)
-    if legacy_cached:
-        return legacy_cached
+    preferred_cached = read_preferred_multi3_detail(spec, dataset_path)
+    if preferred_cached:
+        return preferred_cached
     if should_use_legacy_multi3_cache(dataset_path):
         return waiting_model_detail(spec, missing_dataset_summary(dataset_path))
 
@@ -1158,17 +1161,13 @@ def build_log_section() -> dict[str, Any]:
     }
 
 
-def build_multi3_section(dataset_path: Path, allow_partial: bool = False) -> dict[str, Any]:
+def collect_multi3_details(dataset_path: Path, allow_partial: bool = False) -> dict[str, Any]:
     dataset_path = dataset_path.resolve()
     details: list[dict[str, Any]] = []
     cached_details: list[dict[str, Any]] = []
     if allow_partial and is_default_dataset(dataset_path):
         for spec in MODALITY_SPECS:
-            cached = evaluate_multi3_detail(spec, dataset_path) if should_use_legacy_multi3_cache(dataset_path) else None
-            if not cached:
-                model_path = MUTI3_DIR / spec.model_path
-                cache_key = cache_key_for(f"muti3_{spec.key}_detail", [model_path, dataset_path])
-                cached = read_cached_detail(cache_key)
+            cached = read_preferred_multi3_detail(spec, dataset_path)
             if cached:
                 cached_details.append(cached)
         dataset_meta = cached_details[0]["dataset"] if cached_details else fallback_dataset_summary(dataset_path)
@@ -1190,11 +1189,8 @@ def build_multi3_section(dataset_path: Path, allow_partial: bool = False) -> dic
         runtime_message = f"muti3 缓存预热中，已就绪 {ready}/{len(details)} 个模型。"
     dataset_meta = next((detail["dataset"] for detail in details if detail.get("dataset")), fallback_dataset_summary(dataset_path))
     return {
-        "key": "muti3",
-        "title": "攻击数据特征检测异构组件（muti3）",
-        "summary": "CIC-IDS2017 攻击数据特征检测组件，LSTM / Subspace Clustering / Autoregressive 三模型均返回实时状态。",
         "dataset": dataset_meta,
-        "models": [summarize_model(detail) for detail in details],
+        "details": details,
         "overall": {
             "status": status,
             "models_ready": ready,
@@ -1204,6 +1200,19 @@ def build_multi3_section(dataset_path: Path, allow_partial: bool = False) -> dic
             "runtime_message": runtime_message,
         },
         "model_pool": build_multi3_model_pool(details),
+    }
+
+
+def build_multi3_section(dataset_path: Path, allow_partial: bool = False) -> dict[str, Any]:
+    payload = collect_multi3_details(dataset_path, allow_partial=allow_partial)
+    return {
+        "key": "muti3",
+        "title": "攻击数据特征检测异构组件（muti3）",
+        "summary": "CIC-IDS2017 攻击数据特征检测组件，LSTM / Subspace Clustering / Autoregressive 三模型均返回实时状态。",
+        "dataset": payload["dataset"],
+        "models": [summarize_model(detail) for detail in payload["details"]],
+        "overall": payload["overall"],
+        "model_pool": payload["model_pool"],
     }
 
 
@@ -1926,10 +1935,11 @@ def get_section_detail(section: str, dataset_path: Path, mode: str | None = None
         summary = "日志逻辑异常检测实时监控。"
         model_pool = build_log_model_pool(models)
     elif section == "muti3":
-        models = [evaluate_multi3_detail(spec, dataset_path) for spec in MODALITY_SPECS]
+        multi3_payload = collect_multi3_details(dataset_path, allow_partial=is_default_dataset(dataset_path))
+        models = multi3_payload["details"]
         title = "攻击数据特征检测异构组件（muti3）"
         summary = "多模态攻击数据特征检测实时监控。"
-        model_pool = build_multi3_model_pool(models)
+        model_pool = multi3_payload["model_pool"]
     else:
         raise KeyError(f"unknown section detail: {section}")
 
