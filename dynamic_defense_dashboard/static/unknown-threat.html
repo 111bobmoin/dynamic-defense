@@ -23,12 +23,12 @@
 
       <main class="main-grid threat-page-shell">
         <section class="panel threat-tab-panel">
-          <div class="threat-tab-nav" role="tablist" aria-label="未知威胁检测模块导航">
+          <div class="threat-tab-nav" data-default-threat-tab="apt" role="tablist" aria-label="未知威胁检测模块导航">
             <button class="threat-tab-button is-active" type="button" role="tab" aria-selected="true" data-threat-tab="realtime">
               <span>实时威胁检测总览与异构组件下钻</span>
             </button>
             <button class="threat-tab-button" type="button" role="tab" aria-selected="false" data-threat-tab="apt">
-              <span>未知APT攻击检测</span>
+              <span>未知威胁分析研判</span>
             </button>
           </div>
         </section>
@@ -84,30 +84,63 @@
         </section>
 
         <section class="threat-tab-content" data-threat-panel="apt" role="tabpanel" hidden>
-          <section class="panel threat-apt-placeholder-panel">
+          <section class="panel threat-apt-workbench-panel">
             <div class="stage-header threat-hero-header">
               <div>
-                <p class="stage-kicker">UNKNOWN APT DETECTION</p>
-                <h2>未知APT攻击检测</h2>
-                <p class="stage-subtitle">预留用于后续接入未知APT攻击检测链路、跨阶段关联分析与深度研判能力。</p>
+                <p class="stage-kicker">UNKNOWN THREAT ANALYSIS</p>
+                <h2 id="aptTitle">未知威胁检测异构组件</h2>
+                <p class="stage-subtitle" id="aptHeadline">围绕异常外联、行为偏离和高风险路径开展未知威胁检测，并提供手动分析与定时分析结果下钻入口。</p>
               </div>
               <div class="mode-pills">
-                <span>APT</span>
-                <span>Correlation</span>
-                <span>Reasoning</span>
+                <span>行为关联</span>
+                <span>异常判别</span>
+                <span>处置建议</span>
               </div>
             </div>
-            <div class="threat-apt-placeholder-grid">
-              <article class="threat-apt-placeholder-card">
-                <span>模块状态</span>
-                <strong>功能建设中</strong>
-                <p>后续将在此处承载未知APT攻击检测、阶段画像、攻击链拼接与语义研判入口。</p>
-              </article>
-              <article class="threat-apt-placeholder-card is-muted">
-                <span>规划能力</span>
-                <strong>多阶段APT识别</strong>
-                <p>将接入多源日志、流量、行为图和研判推理能力，形成专属APT检测工作台。</p>
-              </article>
+            <div class="component-grid threat-analysis-grid" id="threatAnalysisGrid"></div>
+            <div class="apt-kpi-grid" id="aptKpiGrid"></div>
+            <div class="apt-workbench-grid">
+              <section class="apt-graph-panel">
+                <div class="panel-title-row">
+                  <div>
+                    <p class="stage-kicker">THREAT GRAPH</p>
+                    <h3>行为关联图谱</h3>
+                  </div>
+                  <span class="panel-badge cyan" id="aptGraphStatus">加载中</span>
+                </div>
+                <div class="apt-graph-stage" id="aptGraphStage"></div>
+              </section>
+              <section class="apt-side-panel">
+                <div class="panel-title-row">
+                  <h3>检测链路</h3>
+                  <span class="panel-badge">Flow</span>
+                </div>
+                <div class="apt-pipeline-list" id="aptPipelineList"></div>
+              </section>
+            </div>
+            <div class="apt-analysis-grid">
+              <section class="apt-card">
+                <div class="panel-title-row">
+                  <h3>关键关系筛选</h3>
+                  <span class="panel-badge">Policy</span>
+                </div>
+                <div class="apt-policy-list" id="aptPolicyList"></div>
+              </section>
+              <section class="apt-card">
+                <div class="panel-title-row">
+                  <h3>威胁路径重构</h3>
+                  <span class="panel-badge cyan">Chain</span>
+                </div>
+                <div class="apt-chain-list" id="aptChainList"></div>
+              </section>
+              <section class="apt-card">
+                <div class="panel-title-row">
+                  <h3>告警与处置建议</h3>
+                  <span class="panel-badge">Response</span>
+                </div>
+                <div class="apt-alert-list" id="aptAlertList"></div>
+                <div class="apt-action-list" id="aptActionList"></div>
+              </section>
             </div>
           </section>
         </section>
