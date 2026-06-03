@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>抗体泛化</title>
     <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/antibody_generalization/antibody.css" />
   </head>
   <body data-page="antibody">
     <script>if (new URLSearchParams(window.location.search).get("embed") === "1") document.body.dataset.embed = "true";</script>
@@ -20,33 +21,20 @@
         </div>
       </header>
 
-      <main class="module-page-grid">
-        <section class="panel module-intro-panel">
+      <main class="antibody-page-shell">
+        <section class="panel module-intro-panel antibody-main-panel">
           <div class="stage-header">
             <div>
               <p class="stage-kicker">ANTIBODY GENERALIZATION</p>
-              <h2>模态内威胁泛化与跨模态抗体泛化</h2>
-              <p class="stage-subtitle">这一页单独承载第二部分能力，当前先保留为空模块，不与 dashboard 或检测页混放。</p>
-            </div>
-            <div class="mode-pills">
-              <span>Intra-modal</span>
-              <span>Cross-modal</span>
+              <h2>抗体泛化动态演示</h2>
             </div>
           </div>
-          <div class="placeholder-copy">
-            <strong>待接入内容</strong>
-            <p>模态内威胁泛化、跨模态抗体迁移、抗体库版本管理、评估结果面板。</p>
-          </div>
-        </section>
-
-        <section class="panel stage-panel">
-          <div class="topology-stage dashboard-stage compact-stage" data-scene="antibody">
-            <div class="topology-backdrop"></div>
-          </div>
+          <div id="antibodyDemoRoot" class="antibody-demo-root"></div>
         </section>
       </main>
     </div>
 
     <script src="/app.js" defer></script>
+    <script src="/antibody_generalization/antibody.js" defer></script>
   </body>
 </html>

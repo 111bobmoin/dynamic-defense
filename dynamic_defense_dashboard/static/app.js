@@ -673,7 +673,12 @@ function bindDashboardTabs() {
   }
   buttons.forEach((button) => {
     button.addEventListener("click", () => {
-      switchDashboardTab(button.dataset.dashboardTab || "overview");
+      const tabKey = button.dataset.dashboardTab || "overview";
+      if (tabKey === "antibody") {
+        window.location.href = "/antibody.html";
+        return;
+      }
+      switchDashboardTab(tabKey);
     });
   });
   switchDashboardTab("overview");

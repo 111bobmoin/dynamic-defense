@@ -33,6 +33,10 @@ STATIC_DIR = BASE_DIR / "static"
 MUTI3_DIR = PROJECT_ROOT / "muti3"
 LOG_DIR = PROJECT_ROOT / "log" / "TEST_main"
 GRAPH_DIR = PROJECT_ROOT / "graph"
+ANTIBODY_DIR = PROJECT_ROOT / "antibody_generalization"
+
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 TOPOLOGY_IMAGE = PROJECT_ROOT / "网络拓扑图.png"
 RUNTIME_CACHE_DIR = BASE_DIR / ".runtime_cache"
 
@@ -1254,7 +1258,7 @@ def build_dashboard_payload(dataset_path: Path, allow_partial: bool = False) -> 
         active_route = ["host1", "m1", "m3", "m4", "m7", "server1"]
         headline = "所有模型均已接入实时运行链路，点击检测页中的模型卡片可进入详情页查看实时检测内容和状态。"
         if integration["overall"]["status"] == "waiting":
-            headline = f"validata.csv 缓存预热中，当前已就绪 {integration['overall']['models_ready']}/{integration['overall']['model_total']} 个模型，页面先展示已完成数据。"
+            headline = f"{DEFAULT_DATASET.name} 缓存预热中，当前已就绪 {integration['overall']['models_ready']}/{integration['overall']['model_total']} 个模型，页面先展示已完成数据。"
         return {
             "generated_at": utc_now_iso(),
             "project": {
@@ -2044,8 +2048,118 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 return
             self.send_json(payload)
             return
+        if parsed.path == "/api/antibody":
+            query = parse_qs(parsed.query)
+            dataset_path = self.resolve_dataset(query.get("dataset", [None])[0])
+            try:
+                from antibody_generalization import build_antibody_payload
+
+                payload = build_antibody_payload(PROJECT_ROOT, dataset_path)
+            except Exception as exc:  # noqa: BLE001
+                self.send_json({"error": str(exc)}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
+                return
+            self.send_json(payload)
+            return
+        if parsed.path == "/api/antibody/status":
+            try:
+                from antibody_generalization import get_run_state
+
+                payload = get_run_state()
+            except Exception as exc:  # noqa: BLE001
+                self.send_json({"error": str(exc)}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
+                return
+            self.send_json(payload)
+            return
+        if parsed.path == "/api/antibody/start":
+            query = parse_qs(parsed.query)
+            step_key = query.get("step", [""])[0]
+            dataset_path = self.resolve_dataset(query.get("dataset", [None])[0])
+            try:
+                from antibody_generalization import StepPrerequisiteError, build_antibody_payload, start_step
+
+                demo_payload = build_antibody_payload(PROJECT_ROOT, dataset_path)
+                payload = start_step(step_key, demo_payload["demo_steps"])
+            except KeyError as exc:
+                self.send_json({"error": str(exc)}, status=HTTPStatus.NOT_FOUND)
+                return
+            except StepPrerequisiteError as exc:
+                self.send_json(
+                    {"error": str(exc), "step": exc.step_key, "missing_steps": exc.missing_steps},
+                    status=HTTPStatus.CONFLICT,
+                )
+                return
+            except Exception as exc:  # noqa: BLE001
+                self.send_json({"error": str(exc)}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
+                return
+            self.send_json(payload)
+            return
+        if parsed.path == "/api/antibody/reset":
+            try:
+                from antibody_generalization import reset_run
+
+                payload = reset_run()
+            except Exception as exc:  # noqa: BLE001
+                self.send_json({"error": str(exc)}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
+                return
+            self.send_json(payload)
+            return
+        if parsed.path == "/api/antibody/cross-modal":
+            try:
+                from antibody_generalization import build_cross_modal_payload
+
+                payload = build_cross_modal_payload(PROJECT_ROOT)
+            except Exception as exc:  # noqa: BLE001
+                self.send_json({"error": str(exc)}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
+                return
+            self.send_json(payload)
+            return
+        if parsed.path == "/api/antibody/cross-modal/status":
+            try:
+                from antibody_generalization import get_cross_modal_run_state
+
+                payload = get_cross_modal_run_state()
+            except Exception as exc:  # noqa: BLE001
+                self.send_json({"error": str(exc)}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
+                return
+            self.send_json(payload)
+            return
+        if parsed.path == "/api/antibody/cross-modal/start":
+            query = parse_qs(parsed.query)
+            step_key = query.get("step", [""])[0]
+            try:
+                from antibody_generalization import StepPrerequisiteError, build_cross_modal_payload, start_cross_modal_step
+
+                demo_payload = build_cross_modal_payload(PROJECT_ROOT)
+                payload = start_cross_modal_step(step_key, demo_payload["demo_steps"])
+            except KeyError as exc:
+                self.send_json({"error": str(exc)}, status=HTTPStatus.NOT_FOUND)
+                return
+            except StepPrerequisiteError as exc:
+                self.send_json(
+                    {"error": str(exc), "step": exc.step_key, "missing_steps": exc.missing_steps},
+                    status=HTTPStatus.CONFLICT,
+                )
+                return
+            except Exception as exc:  # noqa: BLE001
+                self.send_json({"error": str(exc)}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
+                return
+            self.send_json(payload)
+            return
+        if parsed.path == "/api/antibody/cross-modal/reset":
+            try:
+                from antibody_generalization import reset_cross_modal_run
+
+                payload = reset_cross_modal_run()
+            except Exception as exc:  # noqa: BLE001
+                self.send_json({"error": str(exc)}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
+                return
+            self.send_json(payload)
+            return
         if parsed.path == "/assets/topology.png":
             self.serve_file(TOPOLOGY_IMAGE)
+            return
+        if parsed.path.startswith("/antibody_generalization/"):
+            self.serve_file(ANTIBODY_DIR / parsed.path.removeprefix("/antibody_generalization/"))
             return
         asset_path = STATIC_DIR / parsed.path.lstrip("/")
         if asset_path.exists() and asset_path.is_file():
