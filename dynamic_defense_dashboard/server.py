@@ -38,12 +38,14 @@ ANTIBODY_DIR = PROJECT_ROOT / "antibody_generalization"
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 TOPOLOGY_IMAGE = PROJECT_ROOT / "网络拓扑图.png"
-RUNTIME_CACHE_DIR = BASE_DIR / ".runtime_cache"
+RUNTIME_CACHE_DIR = BASE_DIR / "runtime_cache"
 
 DETAIL_CACHE_LOCK = threading.Lock()
 DETAIL_CACHE: dict[tuple[str, ...], dict[str, Any]] = {}
 PAYLOAD_CACHE_LOCK = threading.Lock()
 PAYLOAD_CACHE: dict[tuple[str, ...], dict[str, Any]] = {}
+BACKGROUND_MULTI3_LOCK = threading.Lock()
+BACKGROUND_MULTI3_TASKS: set[tuple[str, ...]] = set()
 
 
 @dataclass(frozen=True)
@@ -114,6 +116,10 @@ def choose_default_dataset() -> Path:
 
 
 DEFAULT_DATASET = choose_default_dataset()
+MULTI3_BUILTIN_DATASETS = tuple(
+    (MUTI3_DIR / "Dataset" / name).resolve()
+    for name in ("validata.csv", "validata_sample.csv", "validata2.csv")
+)
 
 
 def utc_now_iso() -> str:
@@ -344,6 +350,10 @@ def is_default_dataset(dataset_path: Path) -> bool:
     return dataset_path.resolve() == DEFAULT_DATASET.resolve()
 
 
+def is_builtin_multi3_dataset(dataset_path: Path) -> bool:
+    return dataset_path.resolve() in MULTI3_BUILTIN_DATASETS
+
+
 def should_use_legacy_multi3_cache(dataset_path: Path) -> bool:
     return is_default_dataset(dataset_path) and not file_exists(dataset_path)
 
@@ -359,19 +369,52 @@ def missing_dataset_summary(dataset_path: Path) -> dict[str, Any]:
     }
 
 
+def cached_multi3_payload_matches_dataset(cached: dict[str, Any], dataset_path: Path) -> bool:
+    cached_dataset = Path(str(cached.get("dataset", {}).get("path") or ""))
+    return cached_dataset.name == dataset_path.name
+
+
 def read_preferred_multi3_detail(spec: ModalitySpec, dataset_path: Path) -> dict[str, Any] | None:
     model_path = MUTI3_DIR / spec.model_path
     cache_key = cache_key_for(f"muti3_{spec.key}_detail", [model_path, dataset_path])
     cached = read_cached_detail(cache_key)
-    if cached:
+    if cached and cached_multi3_payload_matches_dataset(cached, dataset_path):
         return cached
-    if not is_default_dataset(dataset_path):
+    if not is_builtin_multi3_dataset(dataset_path):
         return None
     cached = load_persistent_cache_payload(cache_key[0])
-    if cached:
+    if cached and cached_multi3_payload_matches_dataset(cached, dataset_path):
         with DETAIL_CACHE_LOCK:
             DETAIL_CACHE[cache_key] = cached
-    return cached if isinstance(cached, dict) else None
+        return cached
+    return None
+
+
+def ensure_multi3_background_warmup(dataset_path: Path) -> None:
+    dataset_path = dataset_path.resolve()
+    if not is_builtin_multi3_dataset(dataset_path):
+        return
+
+    for spec in MODALITY_SPECS:
+        model_path = MUTI3_DIR / spec.model_path
+        cache_key = cache_key_for(f"muti3_{spec.key}_detail", [model_path, dataset_path])
+        if read_preferred_multi3_detail(spec, dataset_path):
+            continue
+        with BACKGROUND_MULTI3_LOCK:
+            if cache_key in BACKGROUND_MULTI3_TASKS:
+                continue
+            BACKGROUND_MULTI3_TASKS.add(cache_key)
+
+        def runner(spec: ModalitySpec = spec, dataset_path: Path = dataset_path, cache_key: tuple[str, ...] = cache_key) -> None:
+            try:
+                evaluate_multi3_detail(spec, dataset_path)
+            except Exception as exc:  # noqa: BLE001
+                print(f"muti3 warmup failed for {spec.key} on {dataset_path.name}: {exc}")
+            finally:
+                with BACKGROUND_MULTI3_LOCK:
+                    BACKGROUND_MULTI3_TASKS.discard(cache_key)
+
+        threading.Thread(target=runner, daemon=True).start()
 
 
 def waiting_model_detail(spec: ModalitySpec, dataset_meta: dict[str, Any]) -> dict[str, Any]:
@@ -1169,7 +1212,8 @@ def collect_multi3_details(dataset_path: Path, allow_partial: bool = False) -> d
     dataset_path = dataset_path.resolve()
     details: list[dict[str, Any]] = []
     cached_details: list[dict[str, Any]] = []
-    if allow_partial and is_default_dataset(dataset_path):
+    if allow_partial and is_builtin_multi3_dataset(dataset_path):
+        ensure_multi3_background_warmup(dataset_path)
         for spec in MODALITY_SPECS:
             cached = read_preferred_multi3_detail(spec, dataset_path)
             if cached:
@@ -1939,7 +1983,7 @@ def get_section_detail(section: str, dataset_path: Path, mode: str | None = None
         summary = "日志逻辑异常检测实时监控。"
         model_pool = build_log_model_pool(models)
     elif section == "muti3":
-        multi3_payload = collect_multi3_details(dataset_path, allow_partial=is_default_dataset(dataset_path))
+        multi3_payload = collect_multi3_details(dataset_path, allow_partial=is_builtin_multi3_dataset(dataset_path))
         models = multi3_payload["details"]
         title = "攻击数据特征检测异构组件（muti3）"
         summary = "多模态攻击数据特征检测实时监控。"
@@ -2178,12 +2222,18 @@ class DashboardHandler(BaseHTTPRequestHandler):
             decoded = (PROJECT_ROOT / decoded).resolve()
         return decoded
 
+    def add_no_cache_headers(self) -> None:
+        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
+
     def serve_file(self, path: Path) -> None:
         if not path.exists():
             self.send_error(HTTPStatus.NOT_FOUND, "Not Found")
             return
         content_type, _ = mimetypes.guess_type(str(path))
         self.send_response(HTTPStatus.OK)
+        self.add_no_cache_headers()
         self.send_header("Content-Type", content_type or "application/octet-stream")
         self.send_header("Content-Length", str(path.stat().st_size))
         self.end_headers()
@@ -2193,6 +2243,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
     def send_json(self, payload: dict[str, Any], status: HTTPStatus = HTTPStatus.OK) -> None:
         data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
+        self.add_no_cache_headers()
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()

@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import csv
 import math
@@ -131,7 +131,7 @@ def build_cross_modal_vector(source_vector: list[float]) -> list[float]:
 
 def build_antibody_payload(project_root: str | Path, dataset: str | Path | None = None) -> dict[str, Any]:
     root = Path(project_root).resolve()
-    dataset_path = Path(dataset).resolve() if dataset else root / "muti3" / "Dataset" / "validata_sample.csv"
+    dataset_path = Path(dataset).resolve() if dataset else root / "muti3" / "Dataset" / "validata.csv"
     profile = dataset_profile(dataset_path)
 
     source_vector = build_threat_vector(profile, 1.0, 0.0)
@@ -290,7 +290,7 @@ def build_antibody_payload(project_root: str | Path, dataset: str | Path | None 
             "primary": "生成 hybrid_feature",
             "items": ["LLDP 邻居发现异常", "认证失败序列", "多目标访问边扩散"],
             "process_logs": [
-                [0, "读取 attack_trace.json 与联调样本 validata_sample.csv"],
+                [0, "读取 attack_trace.json 与联调数据集 validata.csv"],
                 [0.35, "计算 78 维流量统计特征：端口、包数、字节量、IAT 与 Flag"],
                 [0.7, "合并日志证据：LLDP 邻居发现、认证尝试、异常会话创建"],
                 [1.05, "合并行为图证据：源节点沿路径向多目标服务边扩散"],

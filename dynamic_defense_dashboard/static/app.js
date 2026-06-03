@@ -1,4 +1,4 @@
-const DEFAULT_DATASET = "muti3/Dataset/validata_sample.csv";
+const DEFAULT_DATASET = "muti3/Dataset/validata.csv";
 const DEFAULT_ROUTE = ["host1", "m1", "m3", "m4", "m7", "server1"];
 const state = {
   dataset: DEFAULT_DATASET,
@@ -174,7 +174,11 @@ const sceneVariants = {
 
 function getQueryDataset() {
   const params = new URLSearchParams(window.location.search);
-  return params.get("dataset") || DEFAULT_DATASET;
+  const dataset = params.get("dataset");
+  if (!dataset || dataset.endsWith("validata_sample.csv")) {
+    return DEFAULT_DATASET;
+  }
+  return dataset;
 }
 
 function formatPercent(value) {
