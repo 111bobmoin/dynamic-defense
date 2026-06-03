@@ -1,4 +1,4 @@
-const DEFAULT_DATASET = "muti3/Dataset/validata.csv";
+const DEFAULT_DATASET = "muti3/Dataset/validata_sample.csv";
 const DEFAULT_ROUTE = ["host1", "m1", "m3", "m4", "m7", "server1"];
 const state = {
   dataset: DEFAULT_DATASET,
@@ -665,7 +665,12 @@ function bindDashboardTabs() {
   }
   buttons.forEach((button) => {
     button.addEventListener("click", () => {
-      switchDashboardTab(button.dataset.dashboardTab || "overview");
+      const tabKey = button.dataset.dashboardTab || "overview";
+      if (tabKey === "antibody") {
+        window.location.href = "/antibody.html";
+        return;
+      }
+      switchDashboardTab(tabKey);
     });
   });
   switchDashboardTab("overview");

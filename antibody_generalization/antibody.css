@@ -1,0 +1,895 @@
+﻿.antibody-page-shell {
+  position: relative;
+  z-index: 1;
+  margin-top: 16px;
+}
+
+.antibody-main-panel {
+  max-width: 1360px;
+  margin: 0 auto;
+}
+
+.antibody-demo-root {
+  display: grid;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.antibody-demo-hero,
+.antibody-runner,
+.antibody-stage-card,
+.antibody-path-panel,
+.antibody-output-card,
+.antibody-demo-loading,
+.antibody-demo-error {
+  border: 1px solid rgba(126, 231, 255, 0.14);
+  background: linear-gradient(145deg, rgba(11, 19, 34, 0.96), rgba(7, 12, 22, 0.9));
+  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.24);
+}
+
+.antibody-demo-hero.compact {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  padding: 20px 22px;
+  border-radius: 24px;
+}
+
+.antibody-demo-hero h2 {
+  margin: 6px 0 8px;
+  font-family: var(--font-display);
+  font-size: clamp(26px, 3vw, 40px);
+}
+
+.antibody-demo-hero p,
+.antibody-stage-heading p,
+.antibody-output-card p,
+.antibody-path-panel p {
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.antibody-demo-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.antibody-runner {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 16px;
+  padding: 16px;
+  border-radius: 26px;
+}
+
+.antibody-step-rail {
+  display: grid;
+  gap: 10px;
+}
+
+.antibody-step-tab {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 16px;
+  text-align: left;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  cursor: pointer;
+}
+
+.antibody-step-tab span {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  color: var(--cyan);
+  background: rgba(84, 221, 255, 0.08);
+}
+
+.antibody-step-tab strong {
+  color: var(--text);
+}
+
+.antibody-step-tab.is-active {
+  border-color: rgba(84, 221, 255, 0.38);
+  background: rgba(84, 221, 255, 0.1);
+}
+
+.antibody-step-tab.is-done {
+  border-color: rgba(116, 242, 187, 0.24);
+}
+
+.antibody-step-tab.is-done span {
+  color: var(--green);
+  background: rgba(116, 242, 187, 0.1);
+}
+
+.antibody-step-tab:disabled,
+.antibody-step-tab.is-locked {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.antibody-step-tab.is-locked span {
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.antibody-stage-card {
+  min-height: 360px;
+  padding: 26px;
+  border-radius: 22px;
+  display: grid;
+  align-content: start;
+  gap: 18px;
+}
+
+.antibody-prerequisite-tip {
+  width: fit-content;
+  padding: 9px 12px;
+  border-radius: 12px;
+  color: var(--amber);
+  background: rgba(255, 191, 102, 0.1);
+  border: 1px solid rgba(255, 191, 102, 0.22);
+  font-size: 13px;
+}
+
+.antibody-stage-heading span,
+.antibody-output-card span,
+.antibody-demo-panel-title span {
+  color: var(--cyan);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.antibody-stage-heading h3 {
+  margin: 8px 0;
+  font-family: var(--font-display);
+  font-size: clamp(28px, 3vw, 46px);
+}
+
+.antibody-stage-primary {
+  padding: 18px 20px;
+  border-radius: 18px;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: clamp(22px, 2.4vw, 34px);
+  background: linear-gradient(135deg, rgba(255, 191, 102, 0.14), rgba(84, 221, 255, 0.08));
+  border: 1px solid rgba(255, 191, 102, 0.2);
+}
+
+.antibody-stage-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.antibody-stage-list span {
+  padding: 9px 12px;
+  border-radius: 999px;
+  color: var(--cyan);
+  background: rgba(84, 221, 255, 0.08);
+  border: 1px solid rgba(84, 221, 255, 0.12);
+}
+
+.antibody-result-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.antibody-result-item {
+  padding: 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.antibody-result-item span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.antibody-result-item strong {
+  color: var(--text);
+}
+
+.antibody-path-panel.compact {
+  padding: 18px 20px;
+  border-radius: 24px;
+}
+
+.antibody-demo-panel-title h3 {
+  margin: 6px 0 0;
+  font-family: var(--font-display);
+  font-size: 20px;
+}
+
+.antibody-demo-panel-title p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.antibody-path-flow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.antibody-path-node {
+  min-width: 92px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  text-align: center;
+  color: var(--text);
+  background: linear-gradient(145deg, rgba(84, 221, 255, 0.14), rgba(116, 242, 187, 0.07));
+  border: 1px solid rgba(84, 221, 255, 0.22);
+}
+
+.antibody-path-arrow {
+  color: var(--amber);
+  font-size: 22px;
+}
+
+.antibody-output-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.antibody-output-card {
+  padding: 18px;
+  border-radius: 22px;
+}
+
+.antibody-output-card strong {
+  display: block;
+  margin: 8px 0;
+  font-family: var(--font-display);
+  font-size: 24px;
+  color: var(--text);
+}
+
+.antibody-relation-panel {
+  width: 100%;
+  padding: 14px;
+  border-radius: 20px;
+  box-sizing: border-box;
+  border: 1px solid rgba(126, 231, 255, 0.14);
+  background:
+    radial-gradient(circle at 18% 0%, rgba(255, 191, 102, 0.12), transparent 32%),
+    linear-gradient(145deg, rgba(11, 19, 34, 0.96), rgba(7, 12, 22, 0.91));
+  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.24);
+}
+
+.antibody-relation-card {
+  position: relative;
+  overflow: hidden;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.antibody-relation-card span,
+.antibody-relation-card small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.antibody-relation-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.antibody-relation-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.antibody-relation-card.is-passed {
+  border-color: rgba(116, 242, 187, 0.18);
+  background: linear-gradient(145deg, rgba(116, 242, 187, 0.07), rgba(84, 221, 255, 0.04));
+}
+
+.antibody-relation-card.is-muted {
+  opacity: 0.72;
+}
+
+.antibody-relation-card.is-pending {
+  border-style: dashed;
+  border-color: rgba(255, 191, 102, 0.22);
+  background: linear-gradient(145deg, rgba(255, 191, 102, 0.06), rgba(255, 255, 255, 0.025));
+}
+
+.antibody-relation-card.is-pending .antibody-relation-top strong {
+  color: var(--amber);
+}
+
+.antibody-relation-card.is-pending .antibody-relation-bar i {
+  background: transparent;
+}
+
+.antibody-relation-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.antibody-relation-top strong {
+  color: var(--green);
+  font-family: var(--font-display);
+  font-size: 24px;
+}
+
+.antibody-relation-card h4 {
+  margin: 10px 0 8px;
+  color: var(--text);
+  font-size: 16px;
+}
+
+.antibody-relation-bar {
+  height: 7px;
+  margin: 12px 0 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.antibody-relation-bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--cyan), var(--green));
+}
+
+.antibody-demo-loading,
+.antibody-demo-error {
+  padding: 28px;
+  border-radius: 24px;
+  color: var(--muted);
+}
+
+@media (max-width: 1100px) {
+  .antibody-demo-hero.compact,
+  .antibody-runner {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+
+  .antibody-output-grid,
+  .antibody-result-grid,
+  .antibody-relation-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .antibody-demo-actions {
+    justify-content: flex-start;
+  }
+}
+
+.primary-action-button[disabled],
+.ghost-button[disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.antibody-step-tab small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.antibody-step-tab.is-running {
+  border-color: rgba(255, 191, 102, 0.42);
+  background: rgba(255, 191, 102, 0.1);
+}
+
+.antibody-step-tab.is-running span {
+  color: var(--amber);
+  background: rgba(255, 191, 102, 0.14);
+  animation: antibody-pulse 1.2s ease-in-out infinite;
+}
+
+.antibody-progress-wrap {
+  display: grid;
+  gap: 8px;
+}
+
+.antibody-progress-meta {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.antibody-progress-meta strong {
+  color: var(--cyan);
+}
+
+.antibody-progress-bar {
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.antibody-progress-bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--cyan), var(--green));
+  transition: width 0.45s ease;
+}
+
+.antibody-live-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(260px, 0.65fr);
+  gap: 12px;
+}
+
+.antibody-live-grid article {
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.antibody-live-grid h4 {
+  margin: 0 0 10px;
+  color: var(--text);
+}
+
+.antibody-log-box {
+  display: grid;
+  gap: 7px;
+  min-height: 150px;
+  max-height: 210px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.antibody-log-line {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 8px;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.antibody-log-line span {
+  color: var(--green);
+  font-family: Consolas, monospace;
+}
+
+.antibody-log-line.is-muted {
+  display: block;
+  color: var(--muted);
+}
+
+.antibody-artifact-box {
+  display: grid;
+  gap: 9px;
+}
+
+.antibody-artifact-row {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border-radius: 14px;
+  background: rgba(84, 221, 255, 0.06);
+}
+
+.antibody-artifact-row span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.antibody-artifact-row strong {
+  color: var(--text);
+  word-break: break-word;
+}
+
+.antibody-empty-result {
+  grid-column: 1 / -1;
+  padding: 14px;
+  border-radius: 16px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+@keyframes antibody-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+
+@media (max-width: 1100px) {
+  .antibody-live-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* compact display overrides */
+.antibody-demo-root { gap: 12px; margin-top: 14px; }
+.antibody-demo-hero.compact { padding: 14px 16px; border-radius: 18px; }
+.antibody-demo-hero h2 { margin: 0; font-size: 24px; }
+.antibody-runner { gap: 12px; padding: 12px; border-radius: 20px; }
+.antibody-step-rail { gap: 8px; }
+.antibody-step-tab { padding: 10px; border-radius: 14px; }
+.antibody-stage-card { min-height: 320px; padding: 18px; border-radius: 18px; gap: 14px; }
+.antibody-stage-heading h3 { margin: 6px 0 0; font-size: clamp(24px, 2.4vw, 34px); }
+.antibody-stage-primary { padding: 14px 16px; font-size: clamp(20px, 2vw, 28px); }
+.antibody-live-grid article { padding: 12px; }
+.antibody-log-box { min-height: 128px; max-height: 180px; }
+.antibody-path-panel.compact { padding: 14px 16px; border-radius: 18px; }
+.antibody-path-flow { margin-top: 10px; }
+.antibody-path-node { padding: 10px 12px; }
+.antibody-output-grid { gap: 10px; }
+.antibody-output-card { padding: 14px; border-radius: 16px; }
+.antibody-output-card strong { font-size: 20px; }
+.stage-header { margin-bottom: 0; }
+
+/* align lower output cards with the main runner width */
+.antibody-output-grid {
+  width: 100%;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.antibody-path-panel,
+.antibody-output-grid,
+.antibody-relation-panel,
+.antibody-runner,
+.antibody-demo-hero.compact {
+  box-sizing: border-box;
+}
+
+@media (max-width: 1280px) {
+  .antibody-output-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .antibody-output-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* full-width output panel alignment */
+.antibody-output-panel {
+  width: 100%;
+  padding: 12px;
+  border-radius: 20px;
+  box-sizing: border-box;
+  border: 1px solid rgba(126, 231, 255, 0.14);
+  background: linear-gradient(145deg, rgba(11, 19, 34, 0.96), rgba(7, 12, 22, 0.9));
+  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.24);
+}
+
+.antibody-output-panel .antibody-output-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.antibody-output-panel .antibody-output-card {
+  box-shadow: none;
+  min-width: 0;
+}
+
+@media (max-width: 1280px) {
+  .antibody-output-panel .antibody-output-grid {
+    grid-template-columns: repeat(5, minmax(120px, 1fr));
+    overflow-x: auto;
+  }
+}
+
+/* page-width hard alignment */
+.antibody-page-shell,
+.antibody-main-panel,
+.antibody-demo-root,
+.antibody-demo-hero.compact,
+.antibody-runner,
+.antibody-path-panel,
+.antibody-relation-panel,
+.antibody-output-panel {
+  width: 100% !important;
+  max-width: none !important;
+  box-sizing: border-box !important;
+}
+
+.antibody-main-panel {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+.antibody-output-panel {
+  display: block;
+}
+
+.antibody-mode-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.antibody-mode-button {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  text-align: left;
+  color: var(--muted);
+  border: 1px solid rgba(126, 231, 255, 0.14);
+  background: linear-gradient(145deg, rgba(11, 19, 34, 0.92), rgba(7, 12, 22, 0.82));
+  cursor: pointer;
+  box-shadow: 0 14px 45px rgba(0, 0, 0, 0.18);
+}
+
+.antibody-mode-button strong {
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 20px;
+}
+
+.antibody-mode-button span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.antibody-mode-button.is-active {
+  border-color: rgba(84, 221, 255, 0.42);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(84, 221, 255, 0.16), transparent 34%),
+    linear-gradient(145deg, rgba(11, 25, 42, 0.96), rgba(7, 12, 22, 0.9));
+}
+
+.antibody-mode-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.cross-modal-panel,
+.cross-modal-detail-card {
+  border: 1px solid rgba(126, 231, 255, 0.14);
+  background:
+    radial-gradient(circle at 85% 0%, rgba(116, 242, 187, 0.12), transparent 30%),
+    linear-gradient(145deg, rgba(11, 19, 34, 0.96), rgba(7, 12, 22, 0.9));
+  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.24);
+}
+
+.cross-modal-panel {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 20px;
+}
+
+.cross-modal-flow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.cross-modal-flow article {
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.cross-modal-flow span,
+.cross-modal-detail-card .antibody-demo-panel-title span {
+  color: var(--cyan);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.cross-modal-flow strong {
+  display: block;
+  margin: 8px 0;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 20px;
+}
+
+.cross-modal-flow p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.cross-modal-status-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cross-modal-status-strip span {
+  padding: 8px 12px;
+  border-radius: 999px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.cross-modal-status-strip span.is-done {
+  color: var(--green);
+  border-color: rgba(116, 242, 187, 0.22);
+  background: rgba(116, 242, 187, 0.08);
+}
+
+.cross-modal-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.cross-modal-detail-card {
+  min-width: 0;
+  padding: 16px;
+  border-radius: 20px;
+}
+
+.cross-modal-detail-card.is-wide {
+  grid-column: 1 / -1;
+}
+
+.antibody-data-table {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+  overflow-x: auto;
+}
+
+.antibody-data-row {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 4), minmax(130px, 1fr));
+  gap: 6px;
+}
+
+.antibody-data-row span {
+  min-width: 0;
+  padding: 9px 10px;
+  border-radius: 10px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.antibody-data-row.is-head span {
+  color: var(--cyan);
+  background: rgba(84, 221, 255, 0.07);
+}
+
+.cross-modal-antibody-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.cross-modal-antibody-list span {
+  padding: 8px 10px;
+  border-radius: 999px;
+  color: var(--green);
+  background: rgba(116, 242, 187, 0.08);
+  border: 1px solid rgba(116, 242, 187, 0.16);
+}
+
+.antibody-output-grid.is-six,
+.antibody-output-panel .antibody-output-grid.is-six {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+@media (max-width: 1280px) {
+  .antibody-output-panel .antibody-output-grid.is-six {
+    grid-template-columns: repeat(6, minmax(120px, 1fr));
+    overflow-x: auto;
+  }
+}
+
+@media (max-width: 1100px) {
+  .antibody-mode-switch,
+  .cross-modal-flow,
+  .cross-modal-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cross-modal-flow.is-compact article p {
+  min-height: 0;
+}
+
+.cross-modal-detail-grid.is-simple {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.cross-modal-mini-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.cross-modal-mini-list div {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr) minmax(150px, 0.65fr);
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.cross-modal-mini-list strong {
+  color: var(--cyan);
+}
+
+.cross-modal-mini-list span {
+  color: var(--text);
+}
+
+.cross-modal-mini-list em {
+  color: var(--green);
+  font-style: normal;
+  font-family: Consolas, monospace;
+  font-size: 12px;
+}
+
+.cross-modal-check-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.cross-modal-check-grid div {
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(116, 242, 187, 0.07);
+  border: 1px solid rgba(116, 242, 187, 0.16);
+}
+
+.cross-modal-check-grid span,
+.cross-modal-check-grid small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.cross-modal-check-grid strong {
+  color: var(--green);
+  font-family: var(--font-display);
+  font-size: 20px;
+}
+
+@media (max-width: 1100px) {
+  .cross-modal-detail-grid.is-simple,
+  .cross-modal-mini-list div,
+  .cross-modal-check-grid {
+    grid-template-columns: 1fr;
+  }
+}
