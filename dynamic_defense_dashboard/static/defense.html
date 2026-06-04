@@ -17,36 +17,144 @@
         <div class="topbar-actions">
           <a class="ghost-button text-link-button" href="/">返回总览</a>
           <a class="ghost-button text-link-button" href="/unknown-threat.html">未知威胁检测</a>
+          <div class="online-pill" id="defenseGeneratedAt">等待载入</div>
         </div>
       </header>
 
-      <main class="module-page-grid">
-        <section class="panel module-intro-panel">
-          <div class="stage-header">
+      <main class="main-grid threat-page-shell">
+        <section class="panel threat-hero-panel defense-hero-panel">
+          <div class="stage-header threat-hero-header">
             <div>
               <p class="stage-kicker">DYNAMIC DEFENSE</p>
-              <h2>最小代价修复、弹性路由与动态防御机制</h2>
-              <p class="stage-subtitle">这一页单独承载第三部分能力，当前先保留为空模块，不与 dashboard 或检测页混放。</p>
+              <h2>最小代价修复结果展示</h2>
+              <p class="stage-subtitle">
+                当前页面先承接 <code>network_intrusion_detection_GAT</code> 的节点级异常摘要与最小代价修复结果，
+                聚焦修复顺序、核心节点、节点风险画像与防御解释。
+              </p>
             </div>
             <div class="mode-pills">
-              <span>Repair</span>
-              <span>Elastic Routing</span>
-              <span>Defense</span>
+              <span>Repair Plan</span>
+              <span>Core Node</span>
+              <span>Risk View</span>
             </div>
           </div>
-          <div class="placeholder-copy">
-            <strong>待接入内容</strong>
-            <p>最小代价修复策略、弹性路由决策链、动态防御执行结果、策略切换可视化。</p>
+
+          <div class="threat-hero-toolbar defense-hero-toolbar">
+            <div class="threat-hero-chips">
+              <span class="panel-badge cyan">GAT Artifact Demo</span>
+              <span class="panel-badge">Frontend Only</span>
+              <span class="panel-badge">No IP Mapping</span>
+            </div>
+            <button id="defenseRefreshButton" class="primary-button" type="button">刷新展示</button>
+          </div>
+
+          <div class="dashboard-kpi-grid defense-kpi-grid">
+            <article class="dashboard-kpi-card">
+              <span>最小修复代价</span>
+              <strong id="defenseMinCost">--</strong>
+            </article>
+            <article class="dashboard-kpi-card">
+              <span>异常节点</span>
+              <strong id="defenseAnomalousNodes">--</strong>
+            </article>
+            <article class="dashboard-kpi-card">
+              <span>核心节点</span>
+              <strong id="defenseCoreNodes">--</strong>
+            </article>
+            <article class="dashboard-kpi-card">
+              <span>修复步骤</span>
+              <strong id="defenseRepairSteps">--</strong>
+            </article>
           </div>
         </section>
 
-        <section class="panel stage-panel">
-          <div class="topology-stage dashboard-stage compact-stage" data-scene="defense">
+        <section class="center-stage stage-panel-f threat-topology-panel defense-topology-panel">
+          <div class="topology-stage" data-scene="defense">
             <div class="topology-backdrop"></div>
           </div>
         </section>
+
+        <section class="panel defense-summary-panel">
+          <div class="panel-title-row">
+            <div>
+              <h3>运行摘要</h3>
+              <p class="overview-copy" id="defenseOverviewCopy">等待装载动态防御结果。</p>
+            </div>
+            <span class="panel-badge" id="defenseSampleBadge">Sample</span>
+          </div>
+
+          <div class="dataset-facts defense-summary-facts" id="defenseFacts"></div>
+          <div id="defenseModelCard" class="defense-model-card-shell"></div>
+
+          <div class="route-block">
+            <div class="panel-title-row">
+              <h3>关联链路</h3>
+              <span class="panel-badge cyan">Topology Context</span>
+            </div>
+            <div class="route-chips" id="defenseRouteChips"></div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-title-row">
+            <h3>修复优先级</h3>
+            <span class="panel-badge cyan">Repair Order</span>
+          </div>
+          <div class="component-grid defense-repair-grid" id="defenseRepairGrid"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-title-row">
+            <h3>节点风险画像</h3>
+            <span class="panel-badge">Node Summary</span>
+          </div>
+          <div class="component-grid defense-node-grid" id="defenseNodeGrid"></div>
+        </section>
+
+        <section class="panel incident-side-panel defense-incident-panel">
+          <div class="panel-title-row">
+            <h3>防御事件视图</h3>
+            <span class="panel-badge">Insights</span>
+          </div>
+          <div class="stack-list incident-wide-list" id="defenseIncidentList"></div>
+        </section>
       </main>
     </div>
+
+    <template id="defenseRepairCardTemplate">
+      <article class="component-card defense-repair-card">
+        <div class="component-card-header">
+          <div>
+            <h3></h3>
+            <p class="defense-repair-role"></p>
+          </div>
+          <span class="status-pill"></span>
+        </div>
+        <div class="component-stat-grid"></div>
+        <div class="score-tags defense-tag-row"></div>
+      </article>
+    </template>
+
+    <template id="defenseNodeCardTemplate">
+      <article class="component-card defense-node-card">
+        <div class="component-card-header">
+          <div>
+            <h3></h3>
+            <p class="defense-node-role"></p>
+          </div>
+          <span class="status-pill"></span>
+        </div>
+        <div class="component-stat-grid"></div>
+        <p class="defense-node-labels"></p>
+      </article>
+    </template>
+
+    <template id="incidentTemplate">
+      <article class="incident-card">
+        <h4></h4>
+        <p></p>
+      </article>
+    </template>
 
     <script src="/app.js" defer></script>
   </body>

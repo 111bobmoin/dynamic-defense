@@ -1,0 +1,18 @@
+{
+  "script": "repair_plan.py",
+  "input_path": "outputs\\verification\\existing_samples\\no_anomaly\\summary.csv",
+  "source_files": [
+    "outputs\\verification\\existing_samples\\no_anomaly\\summary.csv"
+  ],
+  "repair_order_csv": "outputs\\verification\\existing_samples\\no_anomaly\\repair_order.csv",
+  "core_top_ratio": 0.3,
+  "total_node_count": 20,
+  "anomalous_node_count": 0,
+  "core_node_count": 0,
+  "core_ratio": 0.0,
+  "formula_denominator": 0.0,
+  "minimum_cost": 0.0,
+  "core_nodes": [],
+  "repair_order": [],
+  "formula_interpretation": "No anomalous nodes were found. Cost is set to 0 because there is no repair action to schedule."
+}

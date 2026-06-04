@@ -1,0 +1,37 @@
+{
+  "script": "repair_plan.py",
+  "input_path": "outputs\\verification\\existing_samples\\single_anomaly\\summary.csv",
+  "source_files": [
+    "outputs\\verification\\existing_samples\\single_anomaly\\summary.csv"
+  ],
+  "repair_order_csv": "outputs\\verification\\existing_samples\\single_anomaly\\repair_order.csv",
+  "core_top_ratio": 0.3,
+  "total_node_count": 14,
+  "anomalous_node_count": 1,
+  "core_node_count": 1,
+  "core_ratio": 0.07142857142857142,
+  "formula_denominator": 0.9292253466479792,
+  "minimum_cost": 0.005490638879719829,
+  "core_nodes": [
+    "172.16.50.50"
+  ],
+  "repair_order": [
+    {
+      "repair_rank": 1,
+      "node_id": "172.16.50.50",
+      "node_role": "suspected_compromised_host",
+      "is_core": true,
+      "role_priority": 1.0,
+      "damage_score": 0.8230633666199477,
+      "structural_score": 1.0,
+      "core_score": 0.8938380199719687,
+      "repair_priority_score": 0.9292253466479792,
+      "factorial_rank": 1,
+      "rank_contribution": 0.9292253466479792,
+      "cumulative_contribution": 0.9292253466479792,
+      "remaining_core_after_repair": 0,
+      "top_predicted_labels": "Bot:45; Infiltration:36; FTP-Patator:20"
+    }
+  ],
+  "formula_interpretation": "The original expression does not distinguish different permutations if repair order is treated only as 1..n. To make ordering operational, the denominator is interpreted as the factorial-discounted sum of node repair priority scores derived from the predicted anomalous node set. Under this interpretation, sorting nodes by repair_priority_score in descending order yields the minimum cost."
+}

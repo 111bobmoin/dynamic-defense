@@ -1,0 +1,50 @@
+{
+  "scenario": "no_anomaly",
+  "scenario_name": "无异常节点",
+  "total_flows": 1440,
+  "total_nodes": 20,
+  "labels": {
+    "BENIGN": 1440
+  },
+  "profiles": {
+    "client_to_external": 480,
+    "external_to_client": 240,
+    "client_to_service": 300,
+    "service_to_client": 180,
+    "service_to_service": 120,
+    "external_to_service": 120
+  },
+  "nodes": {
+    "internal_clients": [
+      "10.10.10.11",
+      "10.10.10.12",
+      "10.10.10.13",
+      "10.10.10.14",
+      "10.10.10.15",
+      "10.10.10.16",
+      "10.10.10.17",
+      "10.10.10.18"
+    ],
+    "internal_services": [
+      "10.10.20.21",
+      "10.10.20.22",
+      "10.10.20.23",
+      "10.10.20.24"
+    ],
+    "external_services": [
+      "8.8.8.8",
+      "1.1.1.1",
+      "114.114.114.114",
+      "151.101.1.69",
+      "104.16.132.229",
+      "23.45.119.216",
+      "61.135.169.121",
+      "52.84.217.72"
+    ]
+  },
+  "dataset_dir": "E:\\dataset\\MachineLearningCVE",
+  "output_dir": "outputs\\experiments\\multi13_five_runs_20260529\\run_04_seed_2026051204\\samples\\no_anomaly",
+  "output_csv": "outputs\\experiments\\multi13_five_runs_20260529\\run_04_seed_2026051204\\samples\\no_anomaly\\cicids2017_no_anomaly_sample.csv",
+  "ground_truth_csv": "outputs\\experiments\\multi13_five_runs_20260529\\run_04_seed_2026051204\\samples\\no_anomaly\\cicids2017_no_anomaly_ground_truth.csv",
+  "generation_seed": 4082996759
+}

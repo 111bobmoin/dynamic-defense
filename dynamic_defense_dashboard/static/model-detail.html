@@ -11,10 +11,10 @@
       <header class="topbar">
         <div class="brand">
           <span class="brand-mark">DYNAMIC DEFENSE</span>
-          <h1>未知威胁检测结果</h1>
+          <h1 id="detailPageTitle">组件实时监控</h1>
         </div>
         <div class="topbar-actions">
-          <a class="ghost-button text-link-button" href="/unknown-threat.html">返回检测页</a>
+          <a class="ghost-button text-link-button" id="detailBackLink" href="/?tab=unknown-threat">返回检测页</a>
           <div class="online-pill" id="generatedAt">等待联调</div>
         </div>
       </header>
@@ -22,8 +22,8 @@
       <main class="model-detail-enterprise-layout">
         <section class="panel model-detail-header-panel">
           <div class="model-detail-header-main">
-            <p class="stage-kicker">UNKNOWN THREAT RESULT</p>
-            <h2 id="detailTitle">未知威胁检测结果</h2>
+            <p class="stage-kicker" id="detailStageKicker">COMPONENT MONITORING</p>
+            <h2 id="detailTitle">组件实时监控</h2>
             <p class="stage-subtitle" id="detailSubtitle">等待加载</p>
           </div>
           <div class="model-detail-header-side">
@@ -36,7 +36,7 @@
 
         <section class="component-monitor-grid enterprise-monitor-grid" id="detailModelMonitorGrid"></section>
 
-        <section class="panel model-pool-panel" id="detailModelPoolPanel">
+        <section class="panel model-pool-panel" id="detailModelPoolPanel" hidden>
           <div class="model-pool-header">
             <div>
               <p class="stage-kicker">HETEROGENEOUS MODEL POOL</p>
@@ -66,8 +66,91 @@
             </table>
           </div>
         </section>
+
+        <section class="model-detail-custom-shell" id="defenseDetailShell" hidden>
+          <section class="panel defense-summary-panel">
+            <div class="panel-title-row">
+              <div>
+                <p class="stage-kicker">DEFENSE INTERPRETATION</p>
+                <h3>修复样例摘要</h3>
+              </div>
+              <span class="panel-badge" id="defenseDetailSampleBadge">Sample</span>
+            </div>
+            <p class="overview-copy" id="defenseDetailOverviewCopy">等待加载动态防御详情。</p>
+            <div class="dashboard-kpi-grid defense-kpi-grid">
+              <article class="dashboard-kpi-card">
+                <span>最小代价</span>
+                <strong id="defenseDetailMinCost">--</strong>
+              </article>
+              <article class="dashboard-kpi-card">
+                <span>异常节点</span>
+                <strong id="defenseDetailAnomalousNodes">--</strong>
+              </article>
+              <article class="dashboard-kpi-card">
+                <span>核心节点</span>
+                <strong id="defenseDetailCoreNodes">--</strong>
+              </article>
+              <article class="dashboard-kpi-card">
+                <span>最小代价修复顺序</span>
+                <strong id="defenseDetailRepairSteps">--</strong>
+              </article>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-title-row">
+              <h3>修复优先级</h3>
+              <span class="panel-badge cyan">Repair Order</span>
+            </div>
+            <div class="component-grid defense-repair-grid" id="defenseRepairGrid"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-title-row">
+              <h3>节点风险画像</h3>
+              <span class="panel-badge">Node Summary</span>
+            </div>
+            <div class="component-grid defense-node-grid" id="defenseNodeGrid"></div>
+          </section>
+
+        </section>
       </main>
     </div>
+
+    <template id="defenseRepairCardTemplate">
+      <article class="component-card defense-repair-card">
+        <div class="component-card-header">
+          <div>
+            <h3></h3>
+            <p class="defense-repair-role"></p>
+          </div>
+          <span class="status-pill"></span>
+        </div>
+        <div class="component-stat-grid"></div>
+        <div class="score-tags defense-tag-row"></div>
+      </article>
+    </template>
+
+    <template id="defenseNodeCardTemplate">
+      <article class="component-card defense-node-card">
+        <div class="component-card-header">
+          <div>
+            <h3></h3>
+            <p class="defense-node-role"></p>
+          </div>
+          <span class="status-pill"></span>
+        </div>
+        <div class="component-stat-grid"></div>
+        <p class="defense-node-labels"></p>
+      </article>
+    </template>
+
+    <template id="incidentTemplate">
+      <article class="incident-card">
+        <h4></h4>
+        <p></p>
+      </article>
+    </template>
 
     <script src="/app.js" defer></script>
   </body>

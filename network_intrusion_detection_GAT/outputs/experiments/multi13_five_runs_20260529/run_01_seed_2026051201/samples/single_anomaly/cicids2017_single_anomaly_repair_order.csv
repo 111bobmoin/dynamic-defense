@@ -1,0 +1,2 @@
+﻿repair_rank,node_id,node_role,is_core,role_priority,damage_score,structural_score,core_score,repair_priority_score,factorial_rank,rank_contribution,cumulative_contribution,remaining_core_after_repair,top_predicted_labels
+1,172.16.50.50,suspected_compromised_host,True,1.0,0.8230633761900248,1.0,0.8938380257140148,0.92922535047601,1,0.92922535047601,0.92922535047601,0,Bot:45; Infiltration:36; FTP-Patator:20

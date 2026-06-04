@@ -1,0 +1,60 @@
+{
+  "summary_path": "outputs\\experiments\\multi13_five_runs_20260529\\run_03_seed_2026051203\\samples\\single_anomaly\\cicids2017_single_anomaly_summary.csv",
+  "ground_truth_path": "outputs\\experiments\\multi13_five_runs_20260529\\run_03_seed_2026051203\\samples\\single_anomaly\\cicids2017_single_anomaly_ground_truth.csv",
+  "nodes_evaluated": 5,
+  "overall_accuracy": 1.0,
+  "role_accuracy": [
+    {
+      "ground_truth_role": "suspected_compromised_host",
+      "accuracy": 1.0
+    },
+    {
+      "ground_truth_role": "uncertain",
+      "accuracy": 1.0
+    }
+  ],
+  "confusion": [
+    {
+      "ground_truth_role": "suspected_compromised_host",
+      "predicted_role": "suspected_compromised_host",
+      "count": 1
+    },
+    {
+      "ground_truth_role": "uncertain",
+      "predicted_role": "uncertain",
+      "count": 4
+    }
+  ],
+  "details": [
+    {
+      "node_id": "172.16.50.50",
+      "ground_truth_role": "suspected_compromised_host",
+      "predicted_role": "suspected_compromised_host",
+      "correct": true
+    },
+    {
+      "node_id": "172.16.50.60",
+      "ground_truth_role": "uncertain",
+      "predicted_role": "uncertain",
+      "correct": true
+    },
+    {
+      "node_id": "172.16.50.61",
+      "ground_truth_role": "uncertain",
+      "predicted_role": "uncertain",
+      "correct": true
+    },
+    {
+      "node_id": "172.16.50.62",
+      "ground_truth_role": "uncertain",
+      "predicted_role": "uncertain",
+      "correct": true
+    },
+    {
+      "node_id": "172.16.50.63",
+      "ground_truth_role": "uncertain",
+      "predicted_role": "uncertain",
+      "correct": true
+    }
+  ]
+}

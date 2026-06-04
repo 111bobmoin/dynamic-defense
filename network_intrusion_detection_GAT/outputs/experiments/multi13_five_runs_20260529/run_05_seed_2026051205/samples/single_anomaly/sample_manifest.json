@@ -1,0 +1,42 @@
+{
+  "scenario": "single_anomaly",
+  "scenario_name": "单异常节点",
+  "total_flows": 380,
+  "total_nodes": 5,
+  "labels": {
+    "BENIGN": 244,
+    "Bot": 42,
+    "FTP-Patator": 18,
+    "Infiltration": 42,
+    "PortScan": 16,
+    "SSH-Patator": 18
+  },
+  "primary_anomaly_node": "172.16.50.50",
+  "nodes": [
+    {
+      "node_id": "172.16.50.50",
+      "ground_truth_role": "suspected_compromised_host"
+    },
+    {
+      "node_id": "172.16.50.60",
+      "ground_truth_role": "uncertain"
+    },
+    {
+      "node_id": "172.16.50.61",
+      "ground_truth_role": "uncertain"
+    },
+    {
+      "node_id": "172.16.50.62",
+      "ground_truth_role": "uncertain"
+    },
+    {
+      "node_id": "172.16.50.63",
+      "ground_truth_role": "uncertain"
+    }
+  ],
+  "dataset_dir": "E:\\dataset\\MachineLearningCVE",
+  "output_dir": "outputs\\experiments\\multi13_five_runs_20260529\\run_05_seed_2026051205\\samples\\single_anomaly",
+  "output_csv": "outputs\\experiments\\multi13_five_runs_20260529\\run_05_seed_2026051205\\samples\\single_anomaly\\cicids2017_single_anomaly_sample.csv",
+  "ground_truth_csv": "outputs\\experiments\\multi13_five_runs_20260529\\run_05_seed_2026051205\\samples\\single_anomaly\\cicids2017_single_anomaly_ground_truth.csv",
+  "generation_seed": 3890058450
+}
