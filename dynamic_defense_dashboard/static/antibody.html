@@ -16,12 +16,44 @@
           <h1>抗体泛化</h1>
         </div>
         <div class="topbar-actions">
-          <a class="ghost-button text-link-button" href="/">返回总览</a>
-          <a class="ghost-button text-link-button" href="/unknown-threat.html">未知威胁检测</a>
+          <a class="ghost-button text-link-button" id="antibodyTopOverviewLink" href="/">返回总览</a>
+          <a class="ghost-button text-link-button" id="antibodyTopSectionLink" href="/?tab=antibody">返回模块</a>
         </div>
       </header>
 
       <main class="antibody-page-shell">
+        <section class="panel detail-flow-strip antibody-flow-strip">
+          <div class="detail-breadcrumb" id="antibodyBreadcrumb">总览 / 抗体泛化 / 动态演示</div>
+          <div class="detail-nav-actions">
+            <a class="ghost-button text-link-button" id="antibodyOverviewLink" href="/">返回总览</a>
+            <a class="ghost-button text-link-button" id="antibodySectionLink" href="/?tab=antibody">返回模块</a>
+          </div>
+        </section>
+
+        <section class="panel module-flow-strip module-flow-strip--compact">
+          <article class="flow-step-card is-active">
+            <span class="flow-step-index">01</span>
+            <div>
+              <strong>模式选择</strong>
+              <p>在单模态与跨模态泛化之间切换当前演示链路。</p>
+            </div>
+          </article>
+          <article class="flow-step-card">
+            <span class="flow-step-index">02</span>
+            <div>
+              <strong>步骤执行</strong>
+              <p>按既定步骤推进攻击记录、特征提取、生成与验证。</p>
+            </div>
+          </article>
+          <article class="flow-step-card">
+            <span class="flow-step-index">03</span>
+            <div>
+              <strong>结果研判</strong>
+              <p>查看产物、关系推理和跨模态迁移结果。</p>
+            </div>
+          </article>
+        </section>
+
         <section class="panel module-intro-panel antibody-main-panel">
           <div class="stage-header">
             <div>

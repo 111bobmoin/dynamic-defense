@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>多模态网络动态防御系统</title>
     <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/antibody_generalization/antibody.css" />
   </head>
   <body data-page="dashboard">
     <div class="app-shell enterprise-shell">
@@ -55,7 +56,7 @@
                   <strong id="kpiRiskRate">--</strong>
                 </article>
                 <article class="dashboard-kpi-card">
-                  <span>样本数</span>
+                  <span>实时事件</span>
                   <strong id="kpiSampleCount">--</strong>
                 </article>
                 <article class="dashboard-kpi-card">
@@ -99,8 +100,32 @@
 
         <section class="dashboard-tab-content" data-dashboard-panel="unknown-threat" role="tabpanel" hidden>
           <div class="main-grid threat-page-shell dashboard-module-shell">
+            <section class="panel module-flow-strip module-flow-strip--compact">
+              <article class="flow-step-card is-active">
+                <span class="flow-step-index">01</span>
+                <div>
+                  <strong>实时检测</strong>
+                  <p>监看在线链路与实时组件状态。</p>
+                </div>
+              </article>
+              <article class="flow-step-card">
+                <span class="flow-step-index">02</span>
+                <div>
+                  <strong>组件下钻</strong>
+                  <p>进入单组件实时监控详情页。</p>
+                </div>
+              </article>
+              <article class="flow-step-card">
+                <span class="flow-step-index">03</span>
+                <div>
+                  <strong>分析研判</strong>
+                  <p>查看行为关联、路径与处置建议。</p>
+                </div>
+              </article>
+            </section>
+
             <section class="panel threat-tab-panel inline-module-tab-panel">
-              <div class="threat-tab-nav" data-default-threat-tab="apt" role="tablist" aria-label="未知威胁检测模块导航">
+              <div class="threat-tab-nav" data-default-threat-tab="realtime" role="tablist" aria-label="未知威胁检测模块导航">
                 <button class="threat-tab-button is-active" type="button" role="tab" aria-selected="true" data-threat-tab="realtime">
                   <span>实时威胁检测总览与异构组件下钻</span>
                 </button>
@@ -132,7 +157,10 @@
                       <span class="panel-badge cyan">3 类异构组件</span>
                       <span class="panel-badge">支持组件下钻</span>
                     </div>
-                    <button id="runButton" class="primary-button">更新检测流</button>
+                    <div class="threat-hero-actions">
+                      <button id="runButton" class="primary-button">更新检测流</button>
+                      <button class="ghost-button" type="button" data-threat-nav-target="apt">进入分析研判</button>
+                    </div>
                   </div>
                 </section>
 
@@ -168,10 +196,13 @@
                     <h2 id="aptTitle">未知威胁检测异构组件</h2>
                     <p class="stage-subtitle" id="aptHeadline">围绕异常外联、行为偏离和高风险路径开展未知威胁检测，并提供手动分析与定时分析结果下钻入口。</p>
                   </div>
-                  <div class="mode-pills">
-                    <span>行为关联</span>
-                    <span>异常判别</span>
-                    <span>处置建议</span>
+                  <div class="threat-hero-actions threat-hero-actions--stacked">
+                    <div class="mode-pills">
+                      <span>行为关联</span>
+                      <span>异常判别</span>
+                      <span>处置建议</span>
+                    </div>
+                    <button class="ghost-button" type="button" data-threat-nav-target="realtime">返回实时总览</button>
                   </div>
                 </div>
                 <div class="component-grid threat-analysis-grid" id="threatAnalysisGrid"></div>
@@ -225,29 +256,44 @@
         </section>
 
         <section class="dashboard-tab-content" data-dashboard-panel="antibody" role="tabpanel" hidden>
-          <div class="module-page-grid dashboard-module-shell">
-            <section class="panel module-intro-panel">
+          <div class="antibody-page-shell dashboard-module-shell">
+            <section class="panel module-flow-strip module-flow-strip--compact">
+              <article class="flow-step-card is-active">
+                <span class="flow-step-index">01</span>
+                <div>
+                  <strong>模式选择</strong>
+                  <p>在单模态与跨模态泛化之间切换当前演示链路。</p>
+                </div>
+              </article>
+              <article class="flow-step-card">
+                <span class="flow-step-index">02</span>
+                <div>
+                  <strong>步骤执行</strong>
+                  <p>按既定步骤推进攻击记录、特征提取、生成与验证。</p>
+                </div>
+              </article>
+              <article class="flow-step-card">
+                <span class="flow-step-index">03</span>
+                <div>
+                  <strong>结果研判</strong>
+                  <p>查看产物、关系推理和跨模态迁移结果。</p>
+                </div>
+              </article>
+            </section>
+
+            <section class="panel module-intro-panel antibody-main-panel">
               <div class="stage-header">
                 <div>
                   <p class="stage-kicker">ANTIBODY GENERALIZATION</p>
                   <h2>模态内威胁泛化与跨模态抗体泛化</h2>
-                  <p class="stage-subtitle">当前模块承载泛化能力入口，用于后续接入模态内变种识别、跨模态迁移与抗体库管理能力。</p>
+                  <p class="stage-subtitle">围绕攻击记录、混合特征、抗体生成与验证链路，直接在总览页内展示完整动态演示工作台。</p>
                 </div>
                 <div class="mode-pills">
                   <span>Intra-modal</span>
                   <span>Cross-modal</span>
                 </div>
               </div>
-              <div class="placeholder-copy">
-                <strong>独立演示页面</strong>
-                <p>点击“抗体泛化”后将进入独立演示工作台，展示攻击路径、特征泛化、抗体生成和抗体库关系推理。</p>
-              </div>
-            </section>
-
-            <section class="panel stage-panel">
-              <div class="topology-stage dashboard-stage compact-stage" data-scene="antibody">
-                <div class="topology-backdrop"></div>
-              </div>
+              <div id="antibodyDemoRoot" class="antibody-demo-root"></div>
             </section>
           </div>
         </section>
@@ -337,5 +383,6 @@
     </template>
 
     <script src="/app.js" defer></script>
+    <script src="/antibody_generalization/antibody.js" defer></script>
   </body>
 </html>

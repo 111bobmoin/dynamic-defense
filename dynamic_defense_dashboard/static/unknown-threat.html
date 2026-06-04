@@ -22,8 +22,32 @@
       </header>
 
       <main class="main-grid threat-page-shell">
+        <section class="panel module-flow-strip threat-flow-strip">
+          <article class="flow-step-card is-active">
+            <span class="flow-step-index">01</span>
+            <div>
+              <strong>实时检测总览</strong>
+              <p>先看当前链路状态、联调事件和三类异构组件。</p>
+            </div>
+          </article>
+          <article class="flow-step-card">
+            <span class="flow-step-index">02</span>
+            <div>
+              <strong>组件下钻监控</strong>
+              <p>从组件卡片进入单组件实时监控，查看在线指标与趋势。</p>
+            </div>
+          </article>
+          <article class="flow-step-card">
+            <span class="flow-step-index">03</span>
+            <div>
+              <strong>分析研判闭环</strong>
+              <p>在分析研判页查看关联链路、路径重构与处置建议。</p>
+            </div>
+          </article>
+        </section>
+
         <section class="panel threat-tab-panel">
-          <div class="threat-tab-nav" data-default-threat-tab="apt" role="tablist" aria-label="未知威胁检测模块导航">
+          <div class="threat-tab-nav" data-default-threat-tab="realtime" role="tablist" aria-label="未知威胁检测模块导航">
             <button class="threat-tab-button is-active" type="button" role="tab" aria-selected="true" data-threat-tab="realtime">
               <span>实时威胁检测总览与异构组件下钻</span>
             </button>
@@ -55,7 +79,10 @@
                   <span class="panel-badge cyan">3 类异构组件</span>
                   <span class="panel-badge">支持组件下钻</span>
                 </div>
-                <button id="runButton" class="primary-button">更新检测流</button>
+                <div class="threat-hero-actions">
+                  <button id="runButton" class="primary-button">更新检测流</button>
+                  <button class="ghost-button" type="button" data-threat-nav-target="apt">进入分析研判</button>
+                </div>
               </div>
             </section>
 
@@ -91,10 +118,13 @@
                 <h2 id="aptTitle">未知威胁检测异构组件</h2>
                 <p class="stage-subtitle" id="aptHeadline">围绕异常外联、行为偏离和高风险路径开展未知威胁检测，并提供手动分析与定时分析结果下钻入口。</p>
               </div>
-              <div class="mode-pills">
-                <span>行为关联</span>
-                <span>异常判别</span>
-                <span>处置建议</span>
+              <div class="threat-hero-actions threat-hero-actions--stacked">
+                <div class="mode-pills">
+                  <span>行为关联</span>
+                  <span>异常判别</span>
+                  <span>处置建议</span>
+                </div>
+                <button class="ghost-button" type="button" data-threat-nav-target="realtime">返回实时总览</button>
               </div>
             </div>
             <div class="component-grid threat-analysis-grid" id="threatAnalysisGrid"></div>

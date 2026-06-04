@@ -1460,7 +1460,7 @@ input[type="text"]:focus {
 
 .apt-graph-stage {
   position: relative;
-  min-height: 520px;
+  min-height: 620px;
   margin-top: 14px;
   overflow: hidden;
   border-radius: 20px;
@@ -1502,75 +1502,141 @@ input[type="text"]:focus {
   height: 100%;
 }
 
+.apt-graph-grid path {
+  fill: none;
+  stroke: rgba(102, 156, 224, 0.08);
+  stroke-width: 0.22;
+  stroke-dasharray: 1.1 3.2;
+}
+
+.apt-graph-lanes rect {
+  fill: rgba(9, 18, 32, 0.28);
+  stroke: rgba(89, 140, 214, 0.08);
+  stroke-width: 0.18;
+}
+
+.apt-graph-halo circle {
+  fill: rgba(84, 221, 255, 0.04);
+}
+
+.apt-lane-badge rect {
+  fill: rgba(7, 18, 33, 0.88);
+  stroke: rgba(92, 176, 255, 0.14);
+  stroke-width: 0.24;
+}
+
+.apt-lane-badge text {
+  fill: rgba(141, 171, 211, 0.84);
+  font-size: 1.65px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
 .apt-edge {
-  stroke: rgba(89, 176, 255, 0.72);
-  stroke-width: 1.2;
+  fill: none;
+  stroke: rgba(92, 210, 255, 0.76);
+  stroke-width: 0.94;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .apt-edge.is-latent {
-  stroke-dasharray: 4 3;
-  stroke: rgba(255, 191, 102, 0.82);
+  stroke: rgba(255, 198, 95, 0.9);
+  stroke-dasharray: 2.2 2.1;
 }
 
 .apt-edge.is-filtered {
-  stroke: rgba(124, 148, 176, 0.45);
-  stroke-dasharray: 2 4;
+  stroke: rgba(124, 148, 176, 0.34);
+  stroke-dasharray: 1.1 3;
+}
+
+.apt-edge-pill rect {
+  fill: rgba(5, 14, 25, 0.96);
+  stroke: rgba(97, 173, 241, 0.16);
+  stroke-width: 0.26;
 }
 
 .apt-edge-label {
-  fill: rgba(211, 225, 239, 0.78);
-  font-size: 2.5px;
+  fill: rgba(234, 243, 255, 0.94);
+  font-size: 1.72px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
   text-anchor: middle;
+  text-transform: uppercase;
 }
 
-.apt-node {
-  position: absolute;
-  width: 160px;
-  transform: translate(-50%, -50%);
-  padding: 14px;
-  border-radius: 18px;
-  border: 1px solid rgba(114, 175, 255, 0.14);
-  background: linear-gradient(180deg, rgba(12, 24, 42, 0.86), rgba(7, 15, 27, 0.96));
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+.apt-node-shadow {
+  fill: rgba(0, 0, 0, 0.28);
 }
 
-.apt-node span,
-.apt-node small {
-  display: block;
-  color: var(--text-soft);
+.apt-node-shell {
+  fill: rgba(10, 18, 32, 0.96);
+  stroke: rgba(102, 174, 240, 0.16);
+  stroke-width: 0.28;
 }
 
-.apt-node span {
-  font-size: 11px;
+.apt-node-band {
+  fill: rgba(255, 255, 255, 0.038);
+}
+
+.apt-node-signal {
+  fill: rgba(141, 232, 255, 0.96);
+}
+
+.apt-node-type,
+.apt-node-detail {
+  fill: rgba(154, 180, 214, 0.9);
+  font-size: 1.56px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
-.apt-node strong {
-  display: block;
-  margin-top: 6px;
+.apt-node-title {
+  fill: rgba(242, 247, 255, 0.97);
   font-family: var(--font-display);
-  font-size: 18px;
+  font-size: 2.68px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
 }
 
-.apt-node small {
-  margin-top: 8px;
-  font-size: 12px;
-  line-height: 1.5;
+.apt-node-detail {
+  font-size: 1.52px;
+  letter-spacing: 0.02em;
 }
 
-.apt-node--danger {
-  border-color: rgba(255, 107, 128, 0.34);
-  box-shadow: 0 18px 42px rgba(140, 30, 49, 0.28);
+.apt-node-card--danger .apt-node-shell {
+  stroke: rgba(255, 118, 143, 0.46);
+  box-shadow: 0 0 0 1px rgba(255, 118, 143, 0.12);
 }
 
-.apt-node--amber {
-  border-color: rgba(255, 191, 102, 0.34);
+.apt-node-card--danger .apt-node-band {
+  fill: rgba(255, 118, 143, 0.15);
 }
 
-.apt-node--muted {
-  opacity: 0.78;
-  border-style: dashed;
+.apt-node-card--danger .apt-node-signal {
+  fill: rgba(255, 150, 171, 0.96);
+}
+
+.apt-node-card--amber .apt-node-shell {
+  stroke: rgba(255, 198, 95, 0.44);
+}
+
+.apt-node-card--amber .apt-node-band {
+  fill: rgba(255, 198, 95, 0.14);
+}
+
+.apt-node-card--amber .apt-node-signal {
+  fill: rgba(255, 219, 148, 0.98);
+}
+
+.apt-node-card--muted {
+  opacity: 0.66;
+}
+
+.apt-node-card--muted .apt-node-shell {
+  stroke: rgba(118, 138, 164, 0.22);
+  stroke-dasharray: 0.9 0.9;
 }
 
 .apt-pipeline-list,
@@ -2955,7 +3021,27 @@ input[type="text"]:focus {
   }
 }
 
+@media (max-width: 980px) {
+  .module-flow-strip,
+  .detail-flow-strip {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 760px) {
+  .module-flow-strip,
+  .detail-flow-strip {
+    padding: 14px;
+  }
+
+  .threat-hero-actions--stacked {
+    align-items: stretch;
+  }
+
+  .detail-nav-actions {
+    justify-content: stretch;
+  }
+
   .monitor-chart {
     min-height: 296px;
   }
@@ -3081,6 +3167,90 @@ input[type="text"]:focus {
 .dashboard-module-shell .threat-tab-nav {
   position: relative;
   z-index: 1;
+}
+
+.module-flow-strip,
+.detail-flow-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  padding: 16px;
+}
+
+.module-flow-strip--compact {
+  margin-top: 6px;
+}
+
+.flow-step-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.76), rgba(8, 15, 26, 0.92));
+}
+
+.flow-step-card.is-active {
+  border-color: rgba(34, 211, 238, 0.3);
+  box-shadow: 0 14px 30px rgba(8, 145, 178, 0.12);
+}
+
+.flow-step-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid rgba(34, 211, 238, 0.24);
+  background: rgba(8, 145, 178, 0.12);
+  color: var(--cyan);
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.flow-step-card strong {
+  display: block;
+  margin-bottom: 6px;
+  font-family: var(--font-display);
+  font-size: 16px;
+}
+
+.flow-step-card p,
+.detail-breadcrumb {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.threat-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.threat-hero-actions--stacked {
+  align-items: flex-end;
+  justify-content: flex-end;
+}
+
+.detail-flow-strip {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.detail-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .overview-layout-grid,

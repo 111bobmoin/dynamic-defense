@@ -144,11 +144,173 @@ function resolveDefenseSection(source = null) {
   return defenseComponentSection(source || DEFENSE_SAMPLE);
 }
 
-function detailBackHref(sectionKey) {
-  if (sectionKey === "dynamic_defense") {
-    return "/?tab=defense";
+function currentDashboardTab() {
+  return document.querySelector("[data-dashboard-tab].is-active")?.dataset.dashboardTab || "overview";
+}
+
+function currentThreatTab(scope = document) {
+  return scope.querySelector("[data-threat-tab].is-active")?.dataset.threatTab
+    || scope.querySelector(".threat-tab-nav")?.dataset.defaultThreatTab
+    || "realtime";
+}
+
+function commitHistoryUrl(href, historyMode = "replace") {
+  if (!href || historyMode === "none") {
+    return;
   }
-  return "/?tab=unknown-threat";
+  const nextUrl = new URL(href, window.location.origin);
+  const nextPath = `${nextUrl.pathname}${nextUrl.search}`;
+  const currentPath = `${window.location.pathname}${window.location.search}`;
+  if (nextPath === currentPath) {
+    return;
+  }
+  if (historyMode === "push") {
+    window.history.pushState({}, "", nextPath);
+    return;
+  }
+  window.history.replaceState({}, "", nextPath);
+}
+
+function buildDashboardUrl(tabKey = "overview", threatTab = null) {
+  const url = new URL("/", window.location.origin);
+  if (tabKey && tabKey !== "overview") {
+    url.searchParams.set("tab", tabKey);
+  }
+  if (tabKey === "unknown-threat" && threatTab && threatTab !== "realtime") {
+    url.searchParams.set("threatTab", threatTab);
+  }
+  return `${url.pathname}${url.search}`;
+}
+
+function buildUnknownThreatUrl(threatTab = "realtime") {
+  const url = new URL("/unknown-threat.html", window.location.origin);
+  if (threatTab && threatTab !== "realtime") {
+    url.searchParams.set("threatTab", threatTab);
+  }
+  return `${url.pathname}${url.search}`;
+}
+
+function buildAntibodyUrl(fromPage = null, fromTab = null) {
+  const url = new URL("/antibody.html", window.location.origin);
+  if (fromPage) {
+    url.searchParams.set("fromPage", fromPage);
+  }
+  if (fromTab) {
+    url.searchParams.set("fromTab", fromTab);
+  }
+  return `${url.pathname}${url.search}`;
+}
+
+function antibodyBackState(params = new URLSearchParams(window.location.search)) {
+  const fromPage = params.get("fromPage");
+  const fromTab = params.get("fromTab");
+
+  if (fromPage === "dashboard") {
+    if (fromTab === "overview") {
+      return {
+        overviewHref: buildDashboardUrl("overview"),
+        overviewLabel: "返回系统总览",
+        sectionHref: buildDashboardUrl("antibody"),
+        sectionLabel: "返回抗体泛化入口",
+        breadcrumb: "总览 / 系统总览 / 抗体泛化动态演示",
+      };
+    }
+    return {
+      overviewHref: buildDashboardUrl("overview"),
+      overviewLabel: "返回总览",
+      sectionHref: buildDashboardUrl(fromTab || "antibody"),
+      sectionLabel: "返回抗体泛化入口",
+      breadcrumb: "总览 / 抗体泛化 / 动态演示",
+    };
+  }
+
+  return {
+    overviewHref: buildDashboardUrl("overview"),
+    overviewLabel: "返回总览",
+    sectionHref: buildDashboardUrl("antibody"),
+    sectionLabel: "返回抗体泛化入口",
+    breadcrumb: "总览 / 抗体泛化 / 动态演示",
+  };
+}
+
+function bindAntibodyNavigation() {
+  const nav = antibodyBackState();
+  ["antibodyOverviewLink", "antibodyTopOverviewLink"].forEach((id) => {
+    const link = byId(id);
+    if (link) {
+      link.href = nav.overviewHref;
+      link.textContent = nav.overviewLabel;
+    }
+  });
+  ["antibodySectionLink", "antibodyTopSectionLink"].forEach((id) => {
+    const link = byId(id);
+    if (link) {
+      link.href = nav.sectionHref;
+      link.textContent = nav.sectionLabel;
+    }
+  });
+  const breadcrumb = byId("antibodyBreadcrumb");
+  if (breadcrumb) {
+    breadcrumb.textContent = nav.breadcrumb;
+  }
+}
+
+function detailBackState(sectionKey, params = new URLSearchParams(window.location.search)) {
+  const fromPage = params.get("fromPage");
+  const fromTab = params.get("fromTab");
+  const threatTab = params.get("threatTab") || "realtime";
+
+  if (fromPage === "dashboard") {
+    const tabKey = fromTab || (sectionKey === "dynamic_defense" ? "defense" : "unknown-threat");
+    if (tabKey === "overview") {
+      return {
+        href: buildDashboardUrl("overview"),
+        label: "返回系统总览",
+        sectionLabel: "返回总览工作台",
+        breadcrumb: "总览 / 系统总览 / 组件实时监控",
+      };
+    }
+    return {
+      href: buildDashboardUrl(tabKey, tabKey === "unknown-threat" ? threatTab : null),
+      label: tabKey === "defense" ? "返回动态防御" : "返回检测总览",
+      sectionLabel: tabKey === "defense" ? "返回动态防御模块" : "返回未知威胁模块",
+      breadcrumb: tabKey === "defense" ? "总览 / 动态防御 / 详情" : "总览 / 未知威胁检测 / 组件实时监控",
+    };
+  }
+
+  if (sectionKey === "dynamic_defense") {
+    return {
+      href: buildDashboardUrl("defense"),
+      label: "返回动态防御",
+      sectionLabel: "返回动态防御模块",
+      breadcrumb: "总览 / 动态防御 / 最小代价修复",
+    };
+  }
+
+  return {
+    href: buildUnknownThreatUrl(threatTab),
+    label: "返回检测总览",
+    sectionLabel: "返回未知威胁模块",
+    breadcrumb: "总览 / 未知威胁检测 / 组件实时监控",
+  };
+}
+
+function setDetailNavigation(sectionKey) {
+  const nav = detailBackState(sectionKey);
+  const backLink = byId("detailBackLink");
+  if (backLink) {
+    backLink.href = nav.href;
+    backLink.textContent = nav.label;
+  }
+  const sectionLink = byId("detailSectionLink");
+  if (sectionLink) {
+    sectionLink.href = nav.href;
+    sectionLink.textContent = nav.sectionLabel;
+  }
+  const breadcrumb = byId("detailBreadcrumb");
+  if (breadcrumb) {
+    breadcrumb.textContent = nav.breadcrumb;
+  }
 }
 
 const byId = (id) => document.getElementById(id);
@@ -504,6 +666,24 @@ function componentDetailHref(sectionKey) {
   const params = new URLSearchParams();
   params.set("section", sectionKey);
   params.set("dataset", state.dataset || DEFAULT_DATASET);
+
+  if (page === "dashboard") {
+    const dashboardTab = currentDashboardTab();
+    params.set("fromPage", "dashboard");
+    params.set("fromTab", dashboardTab);
+    if (dashboardTab === "unknown-threat") {
+      const scope = document.querySelector(".dashboard-module-shell") || document;
+      params.set("threatTab", currentThreatTab(scope));
+    }
+  } else if (page === "unknown-threat") {
+    params.set("fromPage", "unknown-threat");
+    params.set("fromTab", "unknown-threat");
+    params.set("threatTab", currentThreatTab(document));
+  } else if (page === "defense") {
+    params.set("fromPage", "dashboard");
+    params.set("fromTab", "defense");
+  }
+
   return `/model-detail.html?${params.toString()}`;
 }
 
@@ -512,6 +692,9 @@ function unknownThreatDetailHref(mode = "manual") {
   params.set("section", "unknown_threat");
   params.set("mode", mode);
   params.set("dataset", state.dataset || DEFAULT_DATASET);
+  params.set("fromPage", page === "dashboard" ? "dashboard" : "unknown-threat");
+  params.set("fromTab", "unknown-threat");
+  params.set("threatTab", "apt");
   return `/model-detail.html?${params.toString()}`;
 }
 
@@ -843,7 +1026,7 @@ function renderDashboard(data) {
   }
   const overviewHeadline = byId("overviewHeadline");
   if (overviewHeadline) {
-    overviewHeadline.textContent = `${data.overview.headline} 当前数据集：${state.dataset.split("/").slice(-1)[0]}`;
+    overviewHeadline.textContent = `${data.overview.headline} 当前页面聚焦在线检测链路、异常事件和联动处置状态。`;
   }
 
   renderSystems(data.systems);
@@ -853,7 +1036,7 @@ function renderDashboard(data) {
   startLiveTicker(data);
 }
 
-function switchDashboardTab(tabKey) {
+function switchDashboardTab(tabKey, options = {}) {
   const buttons = document.querySelectorAll("[data-dashboard-tab]");
   const panels = document.querySelectorAll("[data-dashboard-panel]");
   buttons.forEach((button) => {
@@ -866,6 +1049,21 @@ function switchDashboardTab(tabKey) {
     panel.hidden = !active;
     panel.classList.toggle("is-active", active);
   });
+
+  if (tabKey === "unknown-threat") {
+    const scope = document.querySelector(".dashboard-module-shell") || document;
+    const nav = scope.querySelector(".threat-tab-nav");
+    const threatTab = new URLSearchParams(window.location.search).get("threatTab") || currentThreatTab(scope) || nav?.dataset.defaultThreatTab || "realtime";
+    switchThreatTab(threatTab, scope, { historyMode: "none" });
+  }
+
+  if (options.historyMode === "none") {
+    return;
+  }
+  const threatTab = tabKey === "unknown-threat"
+    ? currentThreatTab(document.querySelector(".dashboard-module-shell") || document)
+    : null;
+  commitHistoryUrl(buildDashboardUrl(tabKey, threatTab), options.historyMode || "replace");
 }
 
 function bindDashboardTabs() {
@@ -876,17 +1074,13 @@ function bindDashboardTabs() {
   buttons.forEach((button) => {
     button.addEventListener("click", () => {
       const tabKey = button.dataset.dashboardTab || "overview";
-      if (tabKey === "antibody") {
-        window.location.href = "/antibody.html";
-        return;
-      }
-      switchDashboardTab(tabKey);
+      switchDashboardTab(tabKey, { historyMode: "push" });
     });
   });
   const params = new URLSearchParams(window.location.search);
   const initialTab = params.get("tab");
   const allowedTabs = new Set(["overview", "unknown-threat", "antibody", "defense"]);
-  switchDashboardTab(allowedTabs.has(initialTab) ? initialTab : "overview");
+  switchDashboardTab(allowedTabs.has(initialTab) ? initialTab : "overview", { historyMode: "none" });
 }
 
 function renderUnknownThreat(data) {
@@ -1287,8 +1481,148 @@ function renderAptGraph(graph = {}) {
   }
   const nodes = graph.nodes || [];
   const edges = graph.edges || [];
-  const nodeMap = new Map(nodes.map((node) => [node.id, node]));
-  const edgeHtml = edges.map((edge) => {
+  if (!nodes.length) {
+    container.innerHTML = '<div class="apt-empty-state">暂无可展示的行为关联图谱。</div>';
+    return;
+  }
+
+  const escapeText = (value) => String(value ?? "--")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+
+  const laneByNode = (node) => {
+    if (node.status === "filtered") {
+      return { center: 84, min: 76, max: 92 };
+    }
+    if (node.status === "anomalous") {
+      return { center: 67, min: 58, max: 74 };
+    }
+    if (node.type === "Netflow" && String(node.stage || "").includes("Command")) {
+      return { center: 19, min: 12, max: 28 };
+    }
+    return { center: 43, min: 34, max: 54 };
+  };
+
+  const incoming = new Map();
+  const outgoing = new Map();
+  nodes.forEach((node) => {
+    incoming.set(node.id, []);
+    outgoing.set(node.id, []);
+  });
+  edges.forEach((edge) => {
+    incoming.get(edge.target)?.push(edge.source);
+    outgoing.get(edge.source)?.push(edge.target);
+  });
+
+  const depthMap = new Map();
+  const queue = nodes
+    .filter((node) => (incoming.get(node.id) || []).length === 0)
+    .sort((left, right) => Number(left.x || 0) - Number(right.x || 0));
+  queue.forEach((node) => depthMap.set(node.id, 0));
+
+  while (queue.length) {
+    const node = queue.shift();
+    const depth = depthMap.get(node.id) || 0;
+    (outgoing.get(node.id) || []).forEach((nextId) => {
+      const nextDepth = depth + 1;
+      if (!depthMap.has(nextId) || nextDepth > depthMap.get(nextId)) {
+        depthMap.set(nextId, nextDepth);
+        const nextNode = nodes.find((item) => item.id === nextId);
+        if (nextNode) {
+          queue.push(nextNode);
+        }
+      }
+    });
+  }
+
+  nodes.forEach((node) => {
+    if (!depthMap.has(node.id)) {
+      depthMap.set(node.id, 0);
+    }
+  });
+
+  const maxDepth = Math.max(...Array.from(depthMap.values()), 1);
+  const buckets = new Map();
+  nodes.forEach((node) => {
+    const lane = laneByNode(node);
+    const key = `${depthMap.get(node.id)}:${lane.center}`;
+    const items = buckets.get(key) || [];
+    items.push(node.id);
+    buckets.set(key, items);
+  });
+
+  const verticalOffsets = [0, -6, 6, -10, 10, -14, 14];
+  const graphBounds = { left: 8, right: 92, top: 10, bottom: 92 };
+  const positionedNodes = nodes.map((node) => {
+    const depth = depthMap.get(node.id) || 0;
+    const lane = laneByNode(node);
+    const bucketKey = `${depth}:${lane.center}`;
+    const siblings = buckets.get(bucketKey) || [node.id];
+    const siblingIndex = siblings.indexOf(node.id);
+    const siblingSpread = siblings.length > 1 ? (siblingIndex - (siblings.length - 1) / 2) * 16.5 : 0;
+    const baseX = graphBounds.left + (depth / maxDepth) * (graphBounds.right - graphBounds.left);
+    const x = baseX + siblingSpread + (lane.center >= 67 ? depth * 1.8 : 0);
+    const labelLength = String(node.label || "").length;
+    const width = Math.max(14.6, Math.min(18.6, 14.6 + labelLength * 0.28));
+    const height = 9.6;
+    const safeMinY = Math.max(graphBounds.top + height / 2, lane.min);
+    const safeMaxY = Math.min(graphBounds.bottom - height / 2, lane.max);
+    const y = Math.max(safeMinY, Math.min(safeMaxY, lane.center + (verticalOffsets[siblingIndex] || 0)));
+    const left = Math.max(graphBounds.left, Math.min(graphBounds.right - width, x - width / 2));
+    const top = Math.max(graphBounds.top, Math.min(graphBounds.bottom - height, y - height / 2));
+    return {
+      ...node,
+      graphX: left + width / 2,
+      graphY: top + height / 2,
+      width,
+      height,
+      left,
+      top,
+    };
+  });
+
+  const nodeMap = new Map(positionedNodes.map((node) => [node.id, node]));
+
+  const anchorPoint = (node, target) => {
+    const dx = target.graphX - node.graphX;
+    const dy = target.graphY - node.graphY;
+    if (Math.abs(dx) >= Math.abs(dy)) {
+      return {
+        x: dx >= 0 ? node.left + node.width : node.left,
+        y: node.top + node.height / 2,
+      };
+    }
+    return {
+      x: node.left + node.width / 2,
+      y: dy >= 0 ? node.top + node.height : node.top,
+    };
+  };
+
+  const edgePath = (source, target, edge, index) => {
+    const start = anchorPoint(source, target);
+    const end = anchorPoint(target, source);
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    const distance = Math.hypot(dx, dy) || 1;
+    const normalX = -dy / distance;
+    const normalY = dx / distance;
+    const bendBase = edge.latent ? 7.5 : 5.2;
+    const bend = Math.min(10.5, Math.max(4.6, bendBase + (index % 2 === 0 ? 1 : -1) * 1.2));
+    const direction = index % 2 === 0 ? 1 : -1;
+    const cx = (start.x + end.x) / 2 + normalX * bend * direction;
+    const cy = (start.y + end.y) / 2 + normalY * bend * direction;
+    const labelOffset = edge.latent ? 2.2 : -1.6;
+    return {
+      d: `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} Q ${cx.toFixed(2)} ${cy.toFixed(2)} ${end.x.toFixed(2)} ${end.y.toFixed(2)}`,
+      labelX: cx + normalX * labelOffset,
+      labelY: cy + normalY * labelOffset,
+    };
+  };
+
+  const edgeHtml = edges.map((edge, index) => {
     const source = nodeMap.get(edge.source);
     const target = nodeMap.get(edge.target);
     if (!source || !target) {
@@ -1298,28 +1632,90 @@ function renderAptGraph(graph = {}) {
     if (edge.latent) {
       classes.push("is-latent");
     }
-    if (edge.weight < 0.35) {
+    if (Number(edge.weight || 0) < 0.35) {
       classes.push("is-filtered");
     }
-    const midX = (source.x + target.x) / 2;
-    const midY = (source.y + target.y) / 2;
+    const path = edgePath(source, target, edge, index);
+    const relation = escapeText(edge.relation || "关联");
+    const pillWidth = Math.max(8.8, Math.min(13.6, relation.length * 1.12 + 2.8));
     return `
-      <line class="${classes.join(" ")}" x1="${source.x}" y1="${source.y}" x2="${target.x}" y2="${target.y}" />
-      <text class="apt-edge-label" x="${midX}" y="${midY - 2}">${edge.relation}</text>
+      <g class="apt-edge-group apt-edge-group--${aptNodeTone(target.status)}">
+        <path class="${classes.join(" ")}" d="${path.d}" marker-end="url(#aptArrow-${edge.latent ? 'latent' : aptNodeTone(target.status)})"></path>
+        <g class="apt-edge-pill" transform="translate(${path.labelX.toFixed(2)} ${path.labelY.toFixed(2)})">
+          <rect x="-${(pillWidth / 2).toFixed(2)}" y="-2.8" width="${pillWidth.toFixed(2)}" height="5.6" rx="2.8"></rect>
+          <text class="apt-edge-label" dy="0.7">${relation}</text>
+        </g>
+      </g>
     `;
   }).join("");
-  const nodeHtml = nodes.map((node) => `
-    <article class="apt-node apt-node--${aptNodeTone(node.status)}" style="left:${node.x}%; top:${node.y}%;">
-      <span>${node.type}</span>
-      <strong>${node.label}</strong>
-      <small>${node.ttp} · ${aptStatusLabel(node.status)}</small>
-    </article>
-  `).join("");
+
+  const nodeHtml = positionedNodes.map((node, index) => {
+    const tone = aptNodeTone(node.status);
+    const type = escapeText(node.type || "node");
+    const label = escapeText(node.label || node.id || `node-${index + 1}`);
+    const detail = escapeText(`${node.ttp || "待补充"} · ${aptStatusLabel(node.status)}`);
+    return `
+      <g class="apt-node-card apt-node-card--${tone}" transform="translate(${node.left.toFixed(2)} ${node.top.toFixed(2)})">
+        <rect class="apt-node-shadow" x="0.8" y="1.1" width="${node.width.toFixed(2)}" height="${node.height.toFixed(2)}" rx="3.5"></rect>
+        <rect class="apt-node-shell" width="${node.width.toFixed(2)}" height="${node.height.toFixed(2)}" rx="3.5"></rect>
+        <rect class="apt-node-band" x="1.2" y="1.2" width="${(node.width - 2.4).toFixed(2)}" height="2.05" rx="1.05"></rect>
+        <circle class="apt-node-signal" cx="${(node.width - 1.8).toFixed(2)}" cy="2.2" r="0.55"></circle>
+        <text class="apt-node-type" x="2" y="2.85">${type}</text>
+        <text class="apt-node-title" x="2" y="6.05">${label}</text>
+        <text class="apt-node-detail" x="2" y="8.38">${detail}</text>
+      </g>
+    `;
+  }).join("");
+
+  const laneBadges = [
+    { x: 8, y: 8, label: 'Command / Delivery' },
+    { x: 8, y: 30, label: 'Core Attack Chain' },
+    { x: 8, y: 90, label: 'Filtered Context / Unknown Anomaly' },
+  ].map((item) => `
+    <g class="apt-lane-badge" transform="translate(${item.x} ${item.y})">
+      <rect width="24" height="5.6" rx="2.8"></rect>
+      <text x="12" y="3.65" text-anchor="middle">${item.label}</text>
+    </g>
+  `).join('');
+
   container.innerHTML = `
-    <svg class="apt-graph-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-      ${edgeHtml}
+    <svg class="apt-graph-svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+      <defs>
+        <filter id="aptNodeGlow" x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation="1.6" result="blur"></feGaussianBlur>
+          <feMerge>
+            <feMergeNode in="blur"></feMergeNode>
+            <feMergeNode in="SourceGraphic"></feMergeNode>
+          </feMerge>
+        </filter>
+        <marker id="aptArrow-cyan" markerWidth="5.4" markerHeight="5.4" refX="4.4" refY="2.7" orient="auto">
+          <path d="M0,0 L5.4,2.7 L0,5.4 Z" fill="rgba(92, 210, 255, 0.9)"></path>
+        </marker>
+        <marker id="aptArrow-amber" markerWidth="5.4" markerHeight="5.4" refX="4.4" refY="2.7" orient="auto">
+          <path d="M0,0 L5.4,2.7 L0,5.4 Z" fill="rgba(255, 198, 95, 0.92)"></path>
+        </marker>
+        <marker id="aptArrow-danger" markerWidth="5.4" markerHeight="5.4" refX="4.4" refY="2.7" orient="auto">
+          <path d="M0,0 L5.4,2.7 L0,5.4 Z" fill="rgba(255, 118, 143, 0.92)"></path>
+        </marker>
+        <marker id="aptArrow-latent" markerWidth="5.4" markerHeight="5.4" refX="4.4" refY="2.7" orient="auto">
+          <path d="M0,0 L5.4,2.7 L0,5.4 Z" fill="rgba(255, 198, 95, 0.92)"></path>
+        </marker>
+      </defs>
+      <g class="apt-graph-grid">
+        <path d="M8 18 H92 M8 50 H92 M8 82 H92 M8 10 V92 M29 10 V92 M50 10 V92 M71 10 V92 M92 10 V92"></path>
+      </g>
+      <g class="apt-graph-lanes">
+        <rect x="8" y="10" width="84" height="18" rx="5"></rect>
+        <rect x="8" y="32" width="84" height="24" rx="5"></rect>
+        <rect x="8" y="60" width="84" height="32" rx="5"></rect>
+      </g>
+      <g class="apt-graph-halo">
+        ${positionedNodes.map((node) => `<circle cx="${node.graphX.toFixed(2)}" cy="${node.graphY.toFixed(2)}" r="8.6"></circle>`).join("")}
+      </g>
+      ${laneBadges}
+      <g class="apt-edge-layer">${edgeHtml}</g>
+      <g class="apt-node-layer" filter="url(#aptNodeGlow)">${nodeHtml}</g>
     </svg>
-    ${nodeHtml}
   `;
 }
 
@@ -1564,7 +1960,7 @@ function renderDashboardDefenseModule(defenseSection = defenseComponentSection()
     </article>
   `;
 }
-function switchThreatTab(tabKey, scope = document) {
+function switchThreatTab(tabKey, scope = document, options = {}) {
   const buttons = scope.querySelectorAll("[data-threat-tab]");
   const panels = scope.querySelectorAll("[data-threat-panel]");
   buttons.forEach((button) => {
@@ -1577,6 +1973,17 @@ function switchThreatTab(tabKey, scope = document) {
     panel.hidden = !active;
     panel.classList.toggle("is-active", active);
   });
+
+  if (options.historyMode === "none") {
+    return;
+  }
+  if (page === "unknown-threat") {
+    commitHistoryUrl(buildUnknownThreatUrl(tabKey), options.historyMode || "replace");
+    return;
+  }
+  if (page === "dashboard" && scope.closest(".dashboard-module-shell")) {
+    commitHistoryUrl(buildDashboardUrl("unknown-threat", tabKey), options.historyMode || "replace");
+  }
 }
 
 function bindThreatTabs() {
@@ -1584,15 +1991,22 @@ function bindThreatTabs() {
   if (!navs.length) {
     return;
   }
+  const params = new URLSearchParams(window.location.search);
   navs.forEach((nav) => {
     const scope = nav.closest(".dashboard-module-shell, .main-grid, body") || document;
     const buttons = nav.querySelectorAll("[data-threat-tab]");
     buttons.forEach((button) => {
       button.addEventListener("click", () => {
-        switchThreatTab(button.dataset.threatTab || "realtime", scope);
+        switchThreatTab(button.dataset.threatTab || "realtime", scope, { historyMode: "push" });
       });
     });
-    switchThreatTab(nav.dataset.defaultThreatTab || "realtime", scope);
+    scope.querySelectorAll("[data-threat-nav-target]").forEach((button) => {
+      button.addEventListener("click", () => {
+        switchThreatTab(button.dataset.threatNavTarget || "realtime", scope, { historyMode: "push" });
+      });
+    });
+    const initialTab = params.get("threatTab") || nav.dataset.defaultThreatTab || "realtime";
+    switchThreatTab(initialTab, scope, { historyMode: "none" });
   });
 }
 
@@ -1930,6 +2344,7 @@ function renderModelPool(detail) {
 
 function renderComponentDetail(detail) {
   const sectionKey = detail.section || detail.key;
+  setDetailNavigation(sectionKey);
   if (sectionKey === "dynamic_defense") {
     renderDefenseDetail(detail);
     return;
@@ -2049,11 +2464,6 @@ function renderDefenseDetail(detail) {
   const generatedAt = byId("generatedAt");
   if (generatedAt) {
     generatedAt.textContent = formatTime(detail.generated_at || sample.generatedAt);
-  }
-  const backLink = byId("detailBackLink");
-  if (backLink) {
-    backLink.href = detailBackHref("dynamic_defense");
-    backLink.textContent = "返回动态防御";
   }
   const title = byId("detailTitle");
   if (title) {
@@ -2257,6 +2667,22 @@ function bindDashboardActions() {
   });
 }
 
+window.addEventListener("popstate", () => {
+  if (page === "dashboard") {
+    const params = new URLSearchParams(window.location.search);
+    const tabKey = params.get("tab");
+    const allowedTabs = new Set(["overview", "unknown-threat", "defense"]);
+    switchDashboardTab(allowedTabs.has(tabKey) ? tabKey : "overview", { historyMode: "none" });
+    return;
+  }
+  if (page === "unknown-threat") {
+    const nav = document.querySelector(".threat-tab-nav");
+    const scope = nav?.closest(".dashboard-module-shell, .main-grid, body") || document;
+    const threatTab = new URLSearchParams(window.location.search).get("threatTab") || nav?.dataset.defaultThreatTab || "realtime";
+    switchThreatTab(threatTab, scope, { historyMode: "none" });
+  }
+});
+
 async function main() {
   state.dataset = getQueryDataset();
   renderTopologyScenes(DEFAULT_ROUTE);
@@ -2267,12 +2693,13 @@ async function main() {
   }
   const overviewHeadline = byId("overviewHeadline");
   if (overviewHeadline) {
-    overviewHeadline.textContent = "正在加载联调数据，首次启动会预热模型缓存。";
+    overviewHeadline.textContent = "正在加载实时检测链路与组件状态。";
   }
 
   if (page === "antibody") {
     stopMonitorPlayback();
     stopLiveTicker();
+    bindAntibodyNavigation();
     return;
   }
 
@@ -2295,11 +2722,7 @@ async function main() {
 
     if (page === "model-detail") {
       const params = new URLSearchParams(window.location.search);
-      const backLink = byId("detailBackLink");
-      if (backLink) {
-        backLink.href = detailBackHref(params.get("section"));
-        backLink.textContent = params.get("section") === "dynamic_defense" ? "返回动态防御" : "返回检测页";
-      }
+      setDetailNavigation(params.get("section"));
       const detail = await fetchComponentDetail();
       if (params.get("section") === "dynamic_defense") {
         renderDefenseDetail(detail);
