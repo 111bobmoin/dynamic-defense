@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "description": "Placeholder threat scenarios for CENI multimodal-network demonstrations. Details can be refined later.",
+  "scenarios": [
+    {
+      "id": "threat_01_comm_hijack",
+      "name": "通信劫持类",
+      "severity": "critical",
+      "description": "攻击者尝试劫持多模态链路中的通信过程，影响端到端业务传输。",
+      "affected_links": ["s1-s3", "s3-s4"],
+      "affected_nodes": ["s1", "s3", "s4"],
+      "related_systems": ["dynamic_defense", "active_defense"],
+      "recommended_action": "检测异常通信路径，建议切换备用路径并提高 INT 采样频率。"
+    },
+    {
+      "id": "threat_02_file_tamper",
+      "name": "文件篡改类",
+      "severity": "warning",
+      "description": "攻击者尝试篡改控制侧或业务侧文件，影响系统配置与业务可信性。",
+      "affected_links": ["host1-s1"],
+      "affected_nodes": ["host1", "s1"],
+      "related_systems": ["trusted_identity_root", "dynamic_defense"],
+      "recommended_action": "校验文件完整性与设备可信标识，记录异常变更来源。"
+    },
+    {
+      "id": "threat_03_unauthorized_device",
+      "name": "未授权设备接入类",
+      "severity": "critical",
+      "description": "未授权设备尝试接入多模态网络，可能造成身份冒用或非法转发。",
+      "affected_links": ["host1-s1", "s1-s5"],
+      "affected_nodes": ["host1", "s1", "s5"],
+      "related_systems": ["trusted_identity_root", "active_defense"],
+      "recommended_action": "阻断未授权接入，触发可信标识校验与隔离策略。"
+    },
+    {
+      "id": "threat_04_data_forgery",
+      "name": "通信数据伪造类",
+      "severity": "critical",
+      "description": "攻击者伪造通信数据或协议字段，诱导交换机错误转发或错误解析。",
+      "affected_links": ["s3-s4", "s4-s7"],
+      "affected_nodes": ["s3", "s4", "s7"],
+      "related_systems": ["dynamic_defense", "intrinsic_security_validation"],
+      "recommended_action": "检查协议字段一致性，联动验证路径安全评分。"
+    },
+    {
+      "id": "threat_05_os_vulnerability",
+      "name": "操作系统漏洞类",
+      "severity": "warning",
+      "description": "主机或交换节点操作系统漏洞被利用，影响节点运行状态或管理面安全。",
+      "affected_links": ["s4-s7"],
+      "affected_nodes": ["s4", "s7"],
+      "related_systems": ["active_defense", "intrinsic_security_validation"],
+      "recommended_action": "检查节点运行状态，建议进行漏洞处置与隔离验证。"
+    },
+    {
+      "id": "threat_06_middleware_vulnerability",
+      "name": "中间件层漏洞类",
+      "severity": "warning",
+      "description": "中间件服务漏洞可能影响控制脚本、应用服务或状态采集链路。",
+      "affected_links": ["s7-server1"],
+      "affected_nodes": ["s7", "server1"],
+      "related_systems": ["dynamic_defense", "active_defense"],
+      "recommended_action": "检测服务异常行为，必要时重启服务并限制访问来源。"
+    },
+    {
+      "id": "threat_07_application_attack",
+      "name": "应用层攻击类",
+      "severity": "critical",
+      "description": "面向 server1 应用服务的异常请求、注入或滥用行为。",
+      "affected_links": ["host1-s1", "s7-server1"],
+      "affected_nodes": ["host1", "server1"],
+      "related_systems": ["dynamic_defense", "active_defense"],
+      "recommended_action": "触发应用侧异常检测，必要时启用蜜罐或限流策略。"
+    },
+    {
+      "id": "threat_08_comm_spoofing",
+      "name": "通信欺骗类",
+      "severity": "critical",
+      "description": "攻击者伪造通信身份、地址或链路上下文，诱导错误信任关系。",
+      "affected_links": ["s1-s3", "s3-s4"],
+      "affected_nodes": ["s1", "s3", "s4"],
+      "related_systems": ["trusted_identity_root", "dynamic_defense"],
+      "recommended_action": "重新验证身份标识与链路上下文，标记可疑通信源。"
+    },
+    {
+      "id": "threat_09_traffic_attack",
+      "name": "流量攻击类",
+      "severity": "critical",
+      "description": "异常高流量或突发流量冲击链路与节点，影响业务服务质量。",
+      "affected_links": ["s3-s4", "s4-s7", "s7-server1"],
+      "affected_nodes": ["s3", "s4", "s7", "server1"],
+      "related_systems": ["dynamic_defense", "active_defense", "intrinsic_security_validation"],
+      "recommended_action": "检测流量峰值并触发限流、路径切换或异常流量牵引。"
+    },
+    {
+      "id": "threat_10_illegal_operation",
+      "name": "非法操作类",
+      "severity": "warning",
+      "description": "未授权或越权操作影响控制面、表项配置或业务运行状态。",
+      "affected_links": ["s1-s3", "s4-s7"],
+      "affected_nodes": ["s1", "s4"],
+      "related_systems": ["trusted_identity_root", "intrinsic_security_validation"],
+      "recommended_action": "审计控制操作来源，校验配置变更并执行安全验证。"
+    }
+  ]
+}

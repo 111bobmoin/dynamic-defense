@@ -1,0 +1,165 @@
+{
+  "ground_truth_path": "outputs\\experiments\\multi13_five_runs_20260529\\run_01_seed_2026051201\\samples\\no_anomaly\\cicids2017_no_anomaly_ground_truth.csv",
+  "summary_path": "outputs\\experiments\\multi13_five_runs_20260529\\run_01_seed_2026051201\\samples\\no_anomaly\\cicids2017_no_anomaly_summary.csv",
+  "predictions_path": "outputs\\experiments\\multi13_five_runs_20260529\\run_01_seed_2026051201\\samples\\no_anomaly\\cicids2017_no_anomaly_predictions.csv",
+  "benign_nodes": 20,
+  "benign_node_windows": 52,
+  "false_positive_windows": 0,
+  "window_false_positive_rate": 0.0,
+  "nodes_with_any_false_positive_window": 0,
+  "node_false_positive_rate_any_window": 0.0,
+  "window_level_role_counts": {
+    "uncertain": 52
+  },
+  "node_level_role_counts": {
+    "uncertain": 20
+  },
+  "false_positive_nodes": [],
+  "node_details": [
+    {
+      "node_id": "10.10.10.11",
+      "ground_truth_role": "uncertain",
+      "predicted_role": "uncertain",
+      "has_false_positive_window": false,
+      "is_false_positive_node": false
+    },
+    {
+      "node_id": "10.10.10.12",
+      "ground_truth_role": "uncertain",
+      "predicted_role": "uncertain",
+      "has_false_positive_window": false,
+      "is_false_positive_node": false
+    },
+    {
+      "node_id": "10.10.10.13",
+      "ground_truth_role": "uncertain",
+      "predicted_role": "uncertain",
+      "has_false_positive_window": false,
+      "is_false_positive_node": false
+    },
+    {
+      "node_id": "10.10.10.14",
+      "ground_truth_role": "uncertain",
+      "predicted_role": "uncertain",
+      "has_false_positive_window": false,
+      "is_false_positive_node": false
+    },
+    {
+      "node_id": "10.10.10.15",
+      "ground_truth_role": "uncertain",
+      "predicted_role": "uncertain",
+      "has_false_positive_window": false,
+      "is_false_positive_node": false
+    },
+    {
+      "node_id": "10.10.10.16",
+      "ground_truth_role": "uncertain",
+      "predicted_role": "uncertain",
+      "has_false_positive_window": false,
+      "is_false_positive_node": false
+    },
+    {
+      "node_id": "10.10.10.17",
+      "ground_truth_role": "uncertain",
+      "predicted_role": "uncertain",
+      "has_false_positive_window": false,
+      "is_false_positive_node": false
+    },
+    {
+      "node_id": "10.10.10.18",
+      "ground_truth_role": "uncertain",
+      "predicted_role": "uncertain",
+      "has_false_positive_window": false,
+      "is_false_positive_node": false
+    },
+    {
+      "node_id": "10.10.20.21",
+      "ground_truth_role": "uncertain",
+      "predicted_role": "uncertain",
+      "has_false_positive_window": false,
+      "is_false_positive_node": false
+    },
+    {
+      "node_id": "10.10.20.22",
+      "ground_truth_role": "uncertain",
+      "predicted_role": "uncertain",
+      "has_false_positive_window": false,
+      "is_false_positive_node": false
+    },
+    {
+      "node_id": "10.10.20.23",
+      "ground_truth_role": "uncertain",
+      "predicted_role": "uncertain",
+      "has_false_positive_window": false,
+      "is_false_positive_node": false
+    },
+    {
+      "node_id": "10.10.20.24",
+      "ground_truth_role": "uncertain",
+      "predicted_role": "uncertain",
+      "has_false_positive_window": false,
+      "is_false_positive_node": false
+    },
+    {
+      "node_id": "8.8.8.8",
+      "ground_truth_role": "uncertain",
+      "predicted_role": "uncertain",
+      "has_false_positive_window": false,
+      "is_false_positive_node": false
+    },
+    {
+      "node_id": "1.1.1.1",
+      "ground_truth_role": "uncertain",
+      "predicted_role": "uncertain",
+      "has_false_positive_window": false,
+      "is_false_positive_node": false
+    },
+    {
+      "node_id": "114.114.114.114",
+      "ground_truth_role": "uncertain",
+      "predicted_role": "uncertain",
+      "has_false_positive_window": false,
+      "is_false_positive_node": false
+    },
+    {
+      "node_id": "151.101.1.69",
+      "ground_truth_role": "uncertain",
+      "predicted_role": "uncertain",
+      "has_false_positive_window": false,
+      "is_false_positive_node": false
+    },
+    {
+      "node_id": "104.16.132.229",
+      "ground_truth_role": "uncertain",
+      "predicted_role": "uncertain",
+      "has_false_positive_window": false,
+      "is_false_positive_node": false
+    },
+    {
+      "node_id": "23.45.119.216",
+      "ground_truth_role": "uncertain",
+      "predicted_role": "uncertain",
+      "has_false_positive_window": false,
+      "is_false_positive_node": false
+    },
+    {
+      "node_id": "61.135.169.121",
+      "ground_truth_role": "uncertain",
+      "predicted_role": "uncertain",
+      "has_false_positive_window": false,
+      "is_false_positive_node": false
+    },
+    {
+      "node_id": "52.84.217.72",
+      "ground_truth_role": "uncertain",
+      "predicted_role": "uncertain",
+      "has_false_positive_window": false,
+      "is_false_positive_node": false
+    }
+  ],
+  "flow_fpr": {
+    "benign_flows": 1440,
+    "false_positive_flows": 242,
+    "flow_false_positive_rate": 0.16805555555555557
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "total_node_count": 13,
+  "anomalous_node_count": 2,
+  "core_node_count": 1,
+  "minimum_cost": 0.005426290403983933,
+  "repair_order": [
+    {
+      "repair_rank": 1,
+      "node_id": "172.16.30.31",
+      "node_role": "suspected_compromised_host",
+      "is_core": true,
+      "role_priority": 1.0,
+      "damage_score": 0.8733402135042285,
+      "structural_score": 0.5,
+      "core_score": 0.7240041281025371,
+      "repair_priority_score": 0.8243360854016915,
+      "factorial_rank": 1,
+      "rank_contribution": 0.8243360854016915,
+      "cumulative_contribution": 0.8243360854016915,
+      "remaining_core_after_repair": 0,
+      "top_predicted_labels": "Bot:61; PortScan:32; Infiltration:30"
+    },
+    {
+      "repair_rank": 2,
+      "node_id": "172.16.10.10",
+      "node_role": "suspected_attacker",
+      "is_core": false,
+      "role_priority": 0.85,
+      "damage_score": 0.5743761422909717,
+      "structural_score": 0.7,
+      "core_score": 0.624625685374583,
+      "repair_priority_score": 0.5322504569163886,
+      "factorial_rank": 2,
+      "rank_contribution": 0.2661252284581943,
+      "cumulative_contribution": 1.0904613138598858,
+      "remaining_core_after_repair": 0,
+      "top_predicted_labels": "DDoS:60; PortScan:49; DoS Hulk:19"
+    }
+  ]
+}

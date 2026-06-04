@@ -1,0 +1,4 @@
+﻿repair_rank,node_id,node_role,is_core,role_priority,damage_score,structural_score,core_score,repair_priority_score,factorial_rank,rank_contribution,cumulative_contribution,remaining_core_after_repair,top_predicted_labels
+1,172.16.30.30,suspected_compromised_host,True,1.0,0.8434204553797284,0.8173076923076923,0.8329753501509141,0.8916951052288145,1,0.8916951052288145,0.8916951052288145,0,Bot:57; Infiltration:29; PortScan:27
+2,172.16.10.10,suspected_attacker,False,0.85,0.5637064057427239,0.83125,0.6707238434456344,0.5607950622970896,2,0.2803975311485448,1.1720926363773594,0,DDoS:65; PortScan:47; DoS Hulk:21
+3,172.16.20.21,suspected_victim,False,0.75,0.4233555083713133,0.2,0.334013305022788,0.3318422033485253,6,0.05530703389142089,1.2273996702687802,0,DoS Slowhttptest:47; DoS slowloris:42; DDoS:37

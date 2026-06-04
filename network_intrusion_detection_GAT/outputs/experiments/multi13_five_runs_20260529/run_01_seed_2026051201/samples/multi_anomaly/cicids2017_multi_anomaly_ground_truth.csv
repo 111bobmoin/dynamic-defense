@@ -1,0 +1,14 @@
+﻿node_id,ground_truth_role
+172.16.10.10,suspected_attacker
+172.16.20.21,suspected_victim
+172.16.30.30,suspected_compromised_host
+10.40.10.11,uncertain
+10.40.10.12,uncertain
+10.40.10.13,uncertain
+10.40.20.21,uncertain
+10.40.20.22,uncertain
+10.40.20.23,uncertain
+198.18.40.31,uncertain
+198.18.40.32,uncertain
+198.18.40.33,uncertain
+198.18.40.34,uncertain

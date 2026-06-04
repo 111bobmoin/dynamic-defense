@@ -177,6 +177,10 @@ body::after {
   background: rgba(10, 28, 38, 0.84);
 }
 
+[hidden] {
+  display: none !important;
+}
+
 .primary-button,
 .ghost-button,
 .text-link-button {
@@ -345,6 +349,11 @@ label,
   max-width: 40ch;
 }
 
+#defenseDetailOverviewCopy {
+  max-width: none;
+  white-space: nowrap;
+}
+
 .overview-metric-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -446,6 +455,16 @@ label,
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.route-chips .route-separator {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0;
 }
 
 .topology-host-panel {
@@ -3066,8 +3085,6 @@ input[type="text"]:focus {
 
 .overview-layout-grid,
 .model-detail-enterprise-layout {
-.overview-layout-grid,
-.model-detail-enterprise-layout {
   display: grid;
   gap: 24px;
   margin-top: 24px;
@@ -3425,6 +3442,11 @@ input[type="text"]:focus {
   gap: 24px;
 }
 
+.model-detail-custom-shell {
+  display: grid;
+  gap: 24px;
+}
+
 .enterprise-monitor-card {
   display: grid;
   gap: 20px;
@@ -3712,8 +3734,191 @@ input[type="text"]:focus {
   line-height: 1.65;
 }
 
+.defense-hero-panel,
+.defense-summary-panel {
+  min-width: 0;
+}
+
+.defense-mode-pills {
+  margin-left: auto;
+  justify-content: flex-end;
+  align-self: flex-start;
+}
+
+.defense-future-panel {
+  margin-top: 0;
+}
+
+.defense-layout-grid {
+  display: grid;
+  grid-template-columns: minmax(340px, 0.95fr) minmax(0, 1.05fr);
+  gap: 16px;
+  margin-top: 0;
+  align-items: start;
+}
+
+.defense-left-column {
+  display: grid;
+  gap: 16px;
+}
+
+.defense-entry-card-shell {
+  margin-top: 14px;
+}
+
+.defense-future-copy {
+  min-height: 0;
+}
+
+.defense-entry-card.is-compact {
+  gap: 12px;
+  padding: 16px;
+  border-radius: 18px;
+}
+
+.defense-entry-stat-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.defense-entry-node-chip strong {
+  font-size: clamp(16px, 1.15vw, 20px);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.defense-entry-highlight {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.10);
+  background: rgba(15, 23, 42, 0.56);
+}
+
+.defense-entry-highlight strong {
+  font-size: 12px;
+  color: var(--text-soft);
+}
+
+.defense-entry-highlight span {
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.defense-inline-model-section {
+  display: grid;
+  gap: 14px;
+  padding-top: 2px;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.defense-inline-model-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.defense-inline-model-header h3 {
+  margin: 4px 0 0;
+}
+
+.defense-inline-model-header p:last-child {
+  margin: 8px 0 0;
+  color: var(--text-soft);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.defense-model-card {
+  gap: 14px;
+  padding: 16px;
+  border-radius: 18px;
+}
+
+.defense-model-stat-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.defense-model-note {
+  color: var(--text-soft);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.defense-hero-toolbar {
+  margin-top: 6px;
+}
+
+.defense-kpi-grid {
+  margin-top: 8px;
+}
+
+#defenseDetailAnomalousNodes,
+#defenseDetailCoreNodes,
+#defenseAnomalousNodes,
+#defenseCoreNodes,
+#defenseDetailRepairSteps {
+  display: block;
+  font-size: clamp(16px, 1.2vw, 22px);
+  line-height: 1.35;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+
+.defense-topology-panel {
+  min-height: 560px;
+}
+
+.defense-summary-facts {
+  margin-top: 16px;
+}
+
+.defense-summary-facts strong {
+  color: var(--text);
+}
+
+.defense-repair-grid,
+.defense-node-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.defense-repair-card,
+.defense-node-card {
+  min-height: 100%;
+}
+
+.defense-repair-role,
+.defense-node-role,
+.defense-node-labels {
+  line-height: 1.65;
+}
+
+.defense-node-labels {
+  margin: 2px 0 0;
+  color: var(--text-soft);
+  font-size: 13px;
+}
+
+.defense-tag-row {
+  margin-top: 2px;
+}
+
+.defense-tag-row span {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 960px) {
   .threat-config-grid--stream {
+    grid-template-columns: 1fr;
+  }
+
+  .defense-layout-grid,
+  .defense-model-stat-grid,
+  .defense-repair-grid,
+  .defense-node-grid {
     grid-template-columns: 1fr;
   }
 }

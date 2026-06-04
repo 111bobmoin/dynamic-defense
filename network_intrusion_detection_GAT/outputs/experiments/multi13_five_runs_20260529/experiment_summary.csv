@@ -1,0 +1,6 @@
+﻿run_index,run_seed,all_passed,no_anomaly_nodes,single_anomaly_nodes,multi_anomaly_nodes,multi_anomaly_anomalous_nodes,no_anomaly_node_fpr_any,no_anomaly_flow_fpr,single_anomaly_benign_fp,single_anomaly_overall_accuracy,single_anomaly_true_rank,single_anomaly_top20,multi_anomaly_benign_fp,multi_anomaly_overall_accuracy,multi_anomaly_recall_in_repair
+1,2026051201,True,,,13,3,0.0,0.16805555555555557,0.0,1.0,1,True,0.0,1.0,1.0
+2,2026051202,True,,,13,3,0.0,0.15902777777777777,0.0,1.0,1,True,0.0,1.0,1.0
+3,2026051203,True,,,13,2,0.0,0.19375,0.0,1.0,1,True,0.0,1.0,1.0
+4,2026051204,True,,,13,2,0.0,0.16944444444444445,0.0,1.0,1,True,0.0,1.0,1.0
+5,2026051205,True,,,13,2,0.0,0.175,0.0,1.0,1,True,0.0,1.0,1.0

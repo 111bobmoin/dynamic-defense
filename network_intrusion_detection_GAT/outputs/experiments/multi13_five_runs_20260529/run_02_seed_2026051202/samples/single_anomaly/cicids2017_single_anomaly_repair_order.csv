@@ -1,0 +1,2 @@
+﻿repair_rank,node_id,node_role,is_core,role_priority,damage_score,structural_score,core_score,repair_priority_score,factorial_rank,rank_contribution,cumulative_contribution,remaining_core_after_repair,top_predicted_labels
+1,172.16.50.50,suspected_compromised_host,True,1.0,0.8214869241866536,1.0,0.8928921545119921,0.9285947696746615,1,0.9285947696746615,0.9285947696746615,0,Bot:46; Infiltration:33; SSH-Patator:20

@@ -1,0 +1,91 @@
+{
+  "scenario": "multi_anomaly",
+  "scenario_name": "多异常节点",
+  "sample_profile": "small",
+  "requested_node_count": 13,
+  "requested_anomalous_node_count": 2,
+  "total_flows": 1218,
+  "total_nodes": 13,
+  "labels": {
+    "BENIGN": 951,
+    "Bot": 55,
+    "DDoS": 60,
+    "DoS Hulk": 20,
+    "FTP-Patator": 20,
+    "Infiltration": 34,
+    "PortScan": 63,
+    "SSH-Patator": 15
+  },
+  "background_profiles": {
+    "client_to_external": 297,
+    "external_to_client": 153,
+    "client_to_service": 189,
+    "service_to_client": 117,
+    "service_to_service": 72,
+    "external_to_service": 72
+  },
+  "node_group_counts": {
+    "internal_clients": 4,
+    "internal_services": 3,
+    "external_services": 4
+  },
+  "nodes": [
+    {
+      "node_id": "172.16.10.10",
+      "ground_truth_role": "suspected_attacker"
+    },
+    {
+      "node_id": "172.16.30.30",
+      "ground_truth_role": "suspected_compromised_host"
+    },
+    {
+      "node_id": "10.40.10.11",
+      "ground_truth_role": "uncertain"
+    },
+    {
+      "node_id": "10.40.10.12",
+      "ground_truth_role": "uncertain"
+    },
+    {
+      "node_id": "10.40.10.13",
+      "ground_truth_role": "uncertain"
+    },
+    {
+      "node_id": "10.40.10.14",
+      "ground_truth_role": "uncertain"
+    },
+    {
+      "node_id": "10.40.20.21",
+      "ground_truth_role": "uncertain"
+    },
+    {
+      "node_id": "10.40.20.22",
+      "ground_truth_role": "uncertain"
+    },
+    {
+      "node_id": "10.40.20.23",
+      "ground_truth_role": "uncertain"
+    },
+    {
+      "node_id": "198.18.40.31",
+      "ground_truth_role": "uncertain"
+    },
+    {
+      "node_id": "198.18.40.32",
+      "ground_truth_role": "uncertain"
+    },
+    {
+      "node_id": "198.18.40.33",
+      "ground_truth_role": "uncertain"
+    },
+    {
+      "node_id": "198.18.40.34",
+      "ground_truth_role": "uncertain"
+    }
+  ],
+  "dataset_dir": "E:\\dataset\\MachineLearningCVE",
+  "output_dir": "outputs\\experiments\\multi13_five_runs_20260529\\run_05_seed_2026051205\\samples\\multi_anomaly",
+  "output_csv": "outputs\\experiments\\multi13_five_runs_20260529\\run_05_seed_2026051205\\samples\\multi_anomaly\\cicids2017_multi_anomaly_sample.csv",
+  "ground_truth_csv": "outputs\\experiments\\multi13_five_runs_20260529\\run_05_seed_2026051205\\samples\\multi_anomaly\\cicids2017_multi_anomaly_ground_truth.csv",
+  "generation_seed": 1496247909
+}
