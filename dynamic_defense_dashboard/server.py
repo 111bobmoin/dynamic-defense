@@ -286,6 +286,18 @@ def cache_file_for(name: str) -> Path:
     return RUNTIME_CACHE_DIR / f"{name}.json"
 
 
+def load_persistent_cache_payload(name: str) -> dict[str, Any] | None:
+    path = cache_file_for(name)
+    if not path.exists():
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    cached = payload.get("payload")
+    return cached if isinstance(cached, dict) else None
+
+
 def load_persistent_cache(name: str, key: tuple[str, ...]) -> dict[str, Any] | None:
     path = cache_file_for(name)
     if not path.exists():
@@ -667,14 +679,25 @@ def build_pinned_gat_experiment_sample() -> dict[str, Any] | None:
     }
 
 
+def preferred_multi3_cache_dataset(dataset_path: Path) -> Path:
+    dataset_path = dataset_path.resolve()
+    if not is_builtin_multi3_dataset(dataset_path):
+        return dataset_path
+    canonical = (MUTI3_DIR / "Dataset" / "validata.csv").resolve()
+    if canonical in MULTI3_BUILTIN_DATASETS:
+        return canonical
+    return DEFAULT_DATASET.resolve()
+
+
 def cached_multi3_payload_matches_dataset(cached: dict[str, Any], dataset_path: Path) -> bool:
     cached_dataset = Path(str(cached.get("dataset", {}).get("path") or ""))
-    return cached_dataset.name == dataset_path.name
+    return cached_dataset.name == preferred_multi3_cache_dataset(dataset_path).name
 
 
 def read_preferred_multi3_detail(spec: ModalitySpec, dataset_path: Path) -> dict[str, Any] | None:
     model_path = MUTI3_DIR / spec.model_path
-    cache_key = cache_key_for(f"muti3_{spec.key}_detail", [model_path, dataset_path])
+    preferred_dataset = preferred_multi3_cache_dataset(dataset_path)
+    cache_key = cache_key_for(f"muti3_{spec.key}_detail", [model_path, preferred_dataset])
     cached = read_cached_detail(cache_key)
     if cached and cached_multi3_payload_matches_dataset(cached, dataset_path):
         return cached
@@ -689,7 +712,7 @@ def read_preferred_multi3_detail(spec: ModalitySpec, dataset_path: Path) -> dict
 
 
 def ensure_multi3_background_warmup(dataset_path: Path) -> None:
-    dataset_path = dataset_path.resolve()
+    dataset_path = preferred_multi3_cache_dataset(dataset_path)
     if not is_builtin_multi3_dataset(dataset_path):
         return
 
