@@ -368,6 +368,19 @@ def read_cached_detail(key: tuple[str, ...]) -> dict[str, Any] | None:
     return cached
 
 
+def read_runtime_cache_only(name: str, key: tuple[str, ...]) -> dict[str, Any] | None:
+    """Read a memory/disk payload without falling back to CPU inference."""
+    with DETAIL_CACHE_LOCK:
+        cached = DETAIL_CACHE.get(key)
+    if cached:
+        return cached
+    cached = load_persistent_cache_payload(name)
+    if cached:
+        with DETAIL_CACHE_LOCK:
+            DETAIL_CACHE[key] = cached
+    return cached
+
+
 def is_default_dataset(dataset_path: Path) -> bool:
     return dataset_path.resolve() == DEFAULT_DATASET.resolve()
 
@@ -712,30 +725,8 @@ def read_preferred_multi3_detail(spec: ModalitySpec, dataset_path: Path) -> dict
 
 
 def ensure_multi3_background_warmup(dataset_path: Path) -> None:
-    dataset_path = preferred_multi3_cache_dataset(dataset_path)
-    if not is_builtin_multi3_dataset(dataset_path):
-        return
-
-    for spec in MODALITY_SPECS:
-        model_path = MUTI3_DIR / spec.model_path
-        cache_key = cache_key_for(f"muti3_{spec.key}_detail", [model_path, dataset_path])
-        if read_preferred_multi3_detail(spec, dataset_path):
-            continue
-        with BACKGROUND_MULTI3_LOCK:
-            if cache_key in BACKGROUND_MULTI3_TASKS:
-                continue
-            BACKGROUND_MULTI3_TASKS.add(cache_key)
-
-        def runner(spec: ModalitySpec = spec, dataset_path: Path = dataset_path, cache_key: tuple[str, ...] = cache_key) -> None:
-            try:
-                evaluate_multi3_detail(spec, dataset_path)
-            except Exception as exc:  # noqa: BLE001
-                print(f"muti3 warmup failed for {spec.key} on {dataset_path.name}: {exc}")
-            finally:
-                with BACKGROUND_MULTI3_LOCK:
-                    BACKGROUND_MULTI3_TASKS.discard(cache_key)
-
-        threading.Thread(target=runner, daemon=True).start()
+    # Dashboard requests are cache-only; never spawn background CPU inference.
+    return
 
 
 def locate_latest_gat_training_metrics() -> tuple[Path, dict[str, Any]] | None:
@@ -1555,6 +1546,15 @@ def evaluate_graph_detail() -> dict[str, Any]:
     model_path = GRAPH_DIR / "gcn_model.pth"
     data_dir = GRAPH_DIR / "processed_bgl"
     cache_key = cache_key_for("graph_gcn_detail", [model_path, data_dir / "X_val.npz", data_dir / "y_val.npy", data_dir / "cooccurrence_graph.gpickle"])
+    cached = read_runtime_cache_only("graph_gcn_detail", cache_key)
+    if cached:
+        return cached
+    return error_model_detail(
+        section="graph", key="graph_gcn", title="GCN 图检测",
+        subtitle="BGL 行为图结构 / 单模型评估", color="lime", kind="graph",
+        model_path=model_path, dataset_meta=fallback_dataset_summary(GRAPH_DIR / "图.csv"),
+        message="未找到 GCN 结果缓存；缓存模式不会启动 CPU 评估。",
+    )
 
     def build() -> dict[str, Any]:
         started = time.time()
@@ -1616,6 +1616,15 @@ def evaluate_log_gru_detail() -> dict[str, Any]:
     x_path = LOG_DIR / "GRU" / "test_data" / "X_test.txt"
     y_path = LOG_DIR / "GRU" / "test_data" / "y_test.txt"
     cache_key = cache_key_for("log_gru_detail", [model_path, x_path, y_path])
+    cached = read_runtime_cache_only("log_gru_detail", cache_key)
+    if cached:
+        return cached
+    return error_model_detail(
+        section="log", key="log_gru", title="GRU 日志检测",
+        subtitle="HDFS 日志 / Attention-GRU", color="cyan", kind="log",
+        model_path=model_path, dataset_meta=fallback_dataset_summary(y_path),
+        message="未找到 GRU 结果缓存；缓存模式不会启动 CPU 评估。",
+    )
 
     def build() -> dict[str, Any]:
         started = time.time()
@@ -1666,6 +1675,15 @@ def evaluate_log_kmeans_detail() -> dict[str, Any]:
     x_path = LOG_DIR / "Kmeans" / "test_data" / "X_test.txt"
     y_path = LOG_DIR / "Kmeans" / "test_data" / "y_test.txt"
     cache_key = cache_key_for("log_kmeans_detail", [model_path, x_path, y_path])
+    cached = read_runtime_cache_only("log_kmeans_detail", cache_key)
+    if cached:
+        return cached
+    return error_model_detail(
+        section="log", key="log_kmeans", title="K-means 日志检测",
+        subtitle="HDFS 日志 / 聚类异常检测", color="amber", kind="log",
+        model_path=model_path, dataset_meta=fallback_dataset_summary(y_path),
+        message="未找到 K-means 结果缓存；缓存模式不会启动 CPU 评估。",
+    )
 
     def build() -> dict[str, Any]:
         started = time.time()
@@ -1706,6 +1724,15 @@ def evaluate_log_dlstm_detail() -> dict[str, Any]:
     x_path = LOG_DIR / "DLSTM" / "test_data" / "X_test.txt"
     y_path = LOG_DIR / "DLSTM" / "test_data" / "y_test.txt"
     cache_key = cache_key_for("log_dlstm_detail", [model_path, x_path, y_path])
+    cached = read_runtime_cache_only("log_dlstm_detail", cache_key)
+    if cached:
+        return cached
+    return error_model_detail(
+        section="log", key="log_dlstm", title="双向 LSTM 日志检测",
+        subtitle="HDFS 日志 / DLSTM", color="lime", kind="log",
+        model_path=model_path, dataset_meta=fallback_dataset_summary(y_path),
+        message="未找到双向 LSTM 结果缓存；缓存模式不会启动 CPU 评估。",
+    )
 
     def build() -> dict[str, Any]:
         started = time.time()
@@ -1753,8 +1780,7 @@ def evaluate_multi3_detail(spec: ModalitySpec, dataset_path: Path) -> dict[str, 
     preferred_cached = read_preferred_multi3_detail(spec, dataset_path)
     if preferred_cached:
         return preferred_cached
-    if should_use_legacy_multi3_cache(dataset_path):
-        return waiting_model_detail(spec, missing_dataset_summary(dataset_path))
+    return waiting_model_detail(spec, missing_dataset_summary(dataset_path))
 
     def build() -> dict[str, Any]:
         started = time.time()
